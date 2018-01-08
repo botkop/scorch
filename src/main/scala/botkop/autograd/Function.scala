@@ -93,6 +93,21 @@ case class Negate(v: Variable) extends Function {
     v.backward(Variable(-gradOutput.data))
 }
 
+case class Dot(v1: Variable, v2: Variable) extends Function {
+  val w: Tensor = v1.data
+  val x: Tensor = v2.data
+
+  override def forward(): Variable = Variable(w dot x, Some(this))
+  override def backward(gradOutput: Variable): Unit = {
+    val dd = gradOutput.data
+    val dw = dd dot x.T
+    val dx = w.T dot dd
+
+    v1.backward(Variable(dw))
+    v2.backward(Variable(dx))
+  }
+}
+
 //===============================================================
 
 case class Exp(v: Variable) extends Function {
@@ -119,5 +134,13 @@ case class Max(x: Variable, y: Variable) extends Function {
   override def backward(gradOutput: Variable): Unit = {
     x.backward(Variable((x.data >= y.data) * gradOutput.data))
     y.backward(Variable((x.data <= y.data) * gradOutput.data))
+  }
+}
+
+case class Threshold(x: Variable, d: Double) extends Function {
+  override def forward(): Variable = Variable(ns.maximum(x.data, d), Some(this))
+
+  override def backward(gradOutput: Variable): Unit = {
+    x.backward(Variable(gradOutput.data * (x.data > d)))
   }
 }

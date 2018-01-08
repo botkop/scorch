@@ -22,6 +22,8 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None) {
   def /(other: Variable): Variable = Div(this, other).forward()
   def **(other: Variable): Variable = Pow(this, other).forward()
 
+  def dot(other: Variable): Variable = Dot(this, other).forward()
+
   def unary_- : Variable = Negate(this).forward()
   def +(d: Double): Variable = AddConstant(this, d).forward()
   def -(d: Double): Variable = SubConstant(this, d).forward()
@@ -30,6 +32,7 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None) {
   def **(d: Double): Variable = PowConstant(this, d).forward()
 
   def mean(): Variable = Mean(this).forward()
+  def threshold(d: Double): Variable = Threshold(this, d).forward()
 
 }
 
