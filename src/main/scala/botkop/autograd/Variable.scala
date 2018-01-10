@@ -4,15 +4,12 @@ import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 
 case class Variable(data: Tensor, gradFn: Option[Function] = None) {
-  var grad: Option[Variable] = None
+  var g: Option[Tensor] = None
+  def grad: Option[Variable] = g.map(Variable(_))
 
   def backward(gradOutput: Variable = Variable(ns.ones(data.shape))): Unit = {
-    grad =
-      if (grad.isDefined)
-        Some(Variable(grad.get.data + gradOutput.data))
-      else
-        Some(gradOutput)
-
+    if (g.isEmpty) g = Some(ns.zeros(gradOutput.data.shape))
+    g.get += gradOutput.data
     for (gf <- gradFn) gf.backward(gradOutput)
   }
 

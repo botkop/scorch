@@ -144,3 +144,28 @@ case class Threshold(x: Variable, d: Double) extends Function {
     x.backward(Variable(gradOutput.data * (x.data > d)))
   }
 }
+
+//============================================
+// Loss functions
+case class SoftMax(actual: Variable, target: Variable) extends Function {
+  val x: Tensor = actual.data
+  val y: Tensor = target.data.T
+
+  val shiftedLogits: Tensor = x - ns.max(x, axis = 1)
+  val z: Tensor = ns.sum(ns.exp(shiftedLogits), axis = 1)
+  val logProbs: Tensor = shiftedLogits - ns.log(z)
+  val probs: Tensor = ns.exp(logProbs)
+  val n: Int = x.shape.head
+
+  val loss: Double = -ns.sum(logProbs(ns.arange(n), y)) / n
+
+  val dx: Tensor = probs
+  dx(ns.arange(n), y) -= 1
+  dx /= n
+
+  override def forward(): Variable = Variable(Tensor(loss), Some(this))
+
+  override def backward(gradOutput: Variable /* not used */ ): Unit = {
+    actual.backward(Variable(dx))
+  }
+}

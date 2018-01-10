@@ -32,6 +32,7 @@ class AutoGradSpec extends FlatSpec with Matchers {
     assert(z.grad.get.data.squeeze() == 3)
     assert(q.grad.get.data.squeeze() == -4)
     assert(f.grad.get.data.squeeze() == 1)
+
   }
 
   it should "do sigmoid backward" in {
@@ -62,6 +63,7 @@ class AutoGradSpec extends FlatSpec with Matchers {
     assert(w1.grad.get.data.squeeze() === -0.39)
     assert(x1.grad.get.data.squeeze() === -0.59)
     assert(w2.grad.get.data.squeeze() === 0.2)
+
   }
 
   it should "derive constants as 1" in {
