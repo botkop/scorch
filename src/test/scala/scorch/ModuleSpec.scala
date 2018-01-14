@@ -66,7 +66,6 @@ class ModuleSpec extends FlatSpec with Matchers {
     val nf2 = 20
 
     val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
-    val lr = 0.01
 
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
