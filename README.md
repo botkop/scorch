@@ -22,8 +22,11 @@ case class Net() extends Module {
 }
 
 val net = Net()
+
+// create an optimizer for updating the parameters
 val optimizer = SGD(net.parameters(), lr = 0.01)
 
+// random target and input to train on
 val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
 val input = Variable(ns.randn(numSamples, nf1))
 
@@ -48,7 +51,7 @@ for (j <- 0 to 1000) {
   // back propagate the derivatives
   loss.backward()
   
-  // update the parameters
+  // update the parameters with the gradients
   optimizer.step()
 }
 ```
