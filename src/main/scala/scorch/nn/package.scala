@@ -1,6 +1,6 @@
-package botkop
+package scorch
 
-import botkop.autograd.{SoftMax, Variable}
+import scorch.autograd.{SoftMax, Variable}
 
 package object nn {
 

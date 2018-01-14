@@ -1,4 +1,4 @@
-package botkop
+package scorch
 
 package object autograd {
 

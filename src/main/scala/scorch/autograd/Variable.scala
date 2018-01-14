@@ -1,4 +1,4 @@
-package botkop.autograd
+package scorch.autograd
 
 import botkop.{numsca => ns}
 import botkop.numsca.Tensor
@@ -9,8 +9,6 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None) extends LazyL
   var g: Option[Tensor] = None
   def grad: Option[Variable] = g.map(Variable(_))
   def shape: List[Int] = data.shape.toList
-
-  // def backward(gradOutput: Variable = Variable(ns.ones(data.shape))): Unit = {
 
   def backward(): Unit = {
     logger.debug(s"no gradient output passed, initializing shape $shape")

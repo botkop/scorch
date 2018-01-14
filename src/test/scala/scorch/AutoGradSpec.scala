@@ -1,6 +1,6 @@
-package botkop
+package scorch
 
-import botkop.autograd._
+import scorch.autograd._
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import org.scalactic.{Equality, TolerantNumerics}

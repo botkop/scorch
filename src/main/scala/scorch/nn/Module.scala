@@ -1,6 +1,6 @@
-package botkop.nn
+package scorch.nn
 
-import botkop.autograd.Variable
+import scorch.autograd.Variable
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging

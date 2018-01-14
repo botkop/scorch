@@ -1,6 +1,6 @@
-package botkop.nn
+package scorch.nn
 
-import botkop.autograd.Variable
+import scorch.autograd.Variable
 
 abstract class Optimizer(parameters: Seq[Variable]) {
   def step(): Unit

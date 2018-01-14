@@ -1,6 +1,6 @@
-package botkop
+package scorch
 
-import botkop.autograd.Variable
+import scorch.autograd.Variable
 import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
 

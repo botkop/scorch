@@ -1,4 +1,4 @@
-package botkop.autograd
+package scorch.autograd
 
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
@@ -9,19 +9,6 @@ trait Function extends LazyLogging {
   def backward(gradOutput: Variable): Unit
 
   def unbroadcast(v: Variable, oldShape: List[Int]): Variable = {
-    /*
-    val t = oldShape.zip(v.shape).zipWithIndex.foldLeft(v.data) {
-      case (d: Tensor, ((oi, ni), i)) =>
-        if (oi == ni)
-          d
-        else if (oi == 1)
-          ns.sum(d, axis = i)
-        else
-          throw new Exception(
-            s"unable to unbroadcast shape ${v.shape} to $oldShape")
-    }
-    Variable(t)
-     */
     unbroadcast(v.data, oldShape)
   }
 
@@ -53,7 +40,7 @@ case class AddConstant(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(v.data + d, Some(this))
   override def backward(gradOutput: Variable): Unit = {
     logger.debug(
-      s"add constant backward, g.shape=${gradOutput.data.shape.toList}")
+      s"add constant backward, g.shape=${gradOutput.shape}")
     v.backward(gradOutput)
   }
 }
@@ -61,7 +48,7 @@ case class AddConstant(v: Variable, d: Double) extends Function {
 case class Sub(v1: Variable, v2: Variable) extends Function {
   def forward(): Variable = Variable(v1.data - v2.data, gradFn = Some(this))
   def backward(gradOutput: Variable): Unit = {
-    logger.debug(s"sub backward, g.shape=${gradOutput.data.shape.toList}")
+    logger.debug(s"sub backward, g.shape=${gradOutput.shape}")
     v1.backward(unbroadcast(gradOutput, v1.shape))
     v2.backward(unbroadcast(-gradOutput.data, v2.shape))
   }
@@ -71,7 +58,7 @@ case class SubConstant(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(v.data + d, Some(this))
   override def backward(gradOutput: Variable): Unit = {
     logger.debug(
-      s"sub constant backward, g.shape=${gradOutput.data.shape.toList}")
+      s"sub constant backward, g.shape=${gradOutput.shape}")
     v.backward(gradOutput)
   }
 }

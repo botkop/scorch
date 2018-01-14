@@ -1,7 +1,7 @@
-package botkop
+package scorch
 
-import botkop.autograd.Variable
-import botkop.nn.{Linear, Module, SGD}
+import scorch.autograd.Variable
+import scorch.nn.{Linear, Module, SGD}
 import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -57,7 +57,6 @@ class ModuleSpec extends FlatSpec with Matchers {
   }
 
   it should "say miauou" in {
-
     ns.rand.setSeed(231)
     Random.setSeed(231)
 
