@@ -1,9 +1,11 @@
 package botkop
 
 import botkop.autograd.Variable
-import botkop.nn.{Linear, Module}
+import botkop.nn.{Linear, Module, SGD}
 import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
+
+import scala.util.Random
 
 class ModuleSpec extends FlatSpec with Matchers {
 
@@ -56,28 +58,45 @@ class ModuleSpec extends FlatSpec with Matchers {
 
   it should "say miauou" in {
 
+    ns.rand.setSeed(231)
+    Random.setSeed(231)
+
+    val numSamples = 128
+    val numClasses = 10
+    val nf1 = 40
+    val nf2 = 20
+
+    val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+    val lr = 0.01
+
     case class Net() extends Module {
-      val fc1 = Linear(40, 20)
-      val fc2 = Linear(20, 10)
+      val fc1 = Linear(nf1, nf2)
+      val fc2 = Linear(nf2, numClasses)
       override def subModules(): Seq[Module] = Seq(fc1, fc2)
       override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
     }
 
     val n = Net()
-    val input = Variable(ns.randn(16, 40))
-    val output = n(input)
-    val target = Variable(ns.randint(10, Array(16, 1)))
-    val loss = nn.softmax(output, target)
-    println(loss)
-    loss.backward()
 
-    val lr = 0.01
-    n.parameters().foreach { p =>
-      println(p.data.shape.toList)
-      println(p.grad.get.data.shape.toList)
-      p.data.shape shouldBe p.grad.get.data.shape
-      p.data -= p.grad.get.data * lr
+    val optimizer = SGD(n.parameters(), lr = 0.01)
+
+    val input = Variable(ns.randn(numSamples, nf1))
+
+    for (j <- 0 to 1000) {
+
+      optimizer.zeroGrad()
+
+      val output = n(input)
+      val loss = nn.softmax(output, target)
+
+      if (j % 100 == 0) {
+        val guessed = ns.argmax(output.data, axis = 1)
+        val accuracy = ns.sum(target.data == guessed) / numSamples
+        println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+      }
+
+      loss.backward()
+      optimizer.step()
     }
-
   }
 }

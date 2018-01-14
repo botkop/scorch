@@ -8,7 +8,8 @@ trait Function extends LazyLogging {
   def forward(): Variable
   def backward(gradOutput: Variable): Unit
 
-  def maybeUnbroadcast(v: Variable, oldShape: List[Int]): Variable = {
+  def unbroadcast(v: Variable, oldShape: List[Int]): Variable = {
+    /*
     val t = oldShape.zip(v.shape).zipWithIndex.foldLeft(v.data) {
       case (d: Tensor, ((oi, ni), i)) =>
         if (oi == ni)
@@ -20,15 +21,31 @@ trait Function extends LazyLogging {
             s"unable to unbroadcast shape ${v.shape} to $oldShape")
     }
     Variable(t)
+     */
+    unbroadcast(v.data, oldShape)
+  }
+
+  def unbroadcast(data: Tensor, oldShape: List[Int]): Variable = {
+    val t = oldShape.zip(data.shape).zipWithIndex.foldLeft(data) {
+      case (d: Tensor, ((oi, ni), i)) =>
+        if (oi == ni)
+          d
+        else if (oi == 1)
+          ns.sum(d, axis = i)
+        else
+          throw new Exception(
+            s"unable to unbroadcast shape ${data.shape.toList} to $oldShape")
+    }
+    Variable(t)
   }
 }
 
 case class Add(v1: Variable, v2: Variable) extends Function {
   def forward(): Variable = Variable(v1.data + v2.data, gradFn = Some(this))
   def backward(gradOutput: Variable): Unit = {
-    logger.debug(s"add backward, g.shape=${gradOutput.data.shape.toList}")
-    v1.backward(maybeUnbroadcast(gradOutput, v1.shape))
-    v2.backward(maybeUnbroadcast(gradOutput, v2.shape))
+    logger.debug(s"add backward, g.shape=${gradOutput.shape}")
+    v1.backward(unbroadcast(gradOutput, v1.shape))
+    v2.backward(unbroadcast(gradOutput, v2.shape))
   }
 }
 
@@ -45,8 +62,8 @@ case class Sub(v1: Variable, v2: Variable) extends Function {
   def forward(): Variable = Variable(v1.data - v2.data, gradFn = Some(this))
   def backward(gradOutput: Variable): Unit = {
     logger.debug(s"sub backward, g.shape=${gradOutput.data.shape.toList}")
-    v1.backward(gradOutput)
-    v2.backward(Variable(-gradOutput.data))
+    v1.backward(unbroadcast(gradOutput, v1.shape))
+    v2.backward(unbroadcast(-gradOutput.data, v2.shape))
   }
 }
 
@@ -63,11 +80,13 @@ case class Mul(v1: Variable, v2: Variable) extends Function {
   override def forward(): Variable = Variable(v1.data * v2.data, Some(this))
   override def backward(gradOutput: Variable): Unit = {
     val dv1 = v2.data * gradOutput.data
+    val vdv1 = unbroadcast(dv1, v1.shape)
     val dv2 = v1.data * gradOutput.data
+    val vdv2 = unbroadcast(dv2, v2.shape)
     logger.debug(
-      s"mul constant backward, dv1.shape=${dv1.shape.toList}, dv2.shape=${dv2.shape.toList}")
-    v1.backward(Variable(dv1))
-    v2.backward(Variable(dv2))
+      s"mul constant backward, dv1.shape=${vdv1.shape}, dv2.shape=${vdv2.shape}")
+    v1.backward(vdv1)
+    v2.backward(vdv2)
   }
 }
 
@@ -86,10 +105,13 @@ case class Div(v1: Variable, v2: Variable) extends Function {
     val rv2 = 1 / v2.data
     val gv1 = gradOutput.data * rv2
     val gv2 = -gradOutput.data * v1.data * (rv2 ** 2)
+
+    val vgv1 = unbroadcast(gv1, v1.shape)
+    val vgv2 = unbroadcast(gv2, v2.shape)
     logger.debug(
-      s"div backward, gv1.shape=${gv1.shape.toList}, gv2.shape=${gv2.shape.toList}")
-    v1.backward(Variable(gv1))
-    v2.backward(Variable(gv2))
+      s"div backward, gv1.shape=${vgv1.shape}, gv2.shape=${vgv2.shape}")
+    v1.backward(vgv1)
+    v2.backward(vgv2)
   }
 }
 
@@ -107,10 +129,14 @@ case class Pow(a: Variable, b: Variable) extends Function {
   override def backward(gradOutput: Variable): Unit = {
     val ga = gradOutput.data * b.data * (a.data ** (b.data - 1))
     val gb = gradOutput.data * (a.data ** b.data) * ns.log(a.data)
+
+    val vga = unbroadcast(ga, a.shape)
+    val vgb = unbroadcast(gb, b.shape)
+
     logger.debug(
-      s"pow backward, ga.shape=${ga.shape.toList}, gb.shape=${gb.shape.toList}")
-    a.backward(Variable(ga))
-    b.backward(Variable(gb))
+      s"pow backward, ga.shape=${vga.shape}, gb.shape=${vgb.shape}")
+    a.backward(vga)
+    b.backward(vgb)
   }
 }
 

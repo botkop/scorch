@@ -6,13 +6,11 @@ import com.typesafe.scalalogging.LazyLogging
 
 case class Variable(data: Tensor, gradFn: Option[Function] = None) extends LazyLogging {
 
-
   var g: Option[Tensor] = None
   def grad: Option[Variable] = g.map(Variable(_))
+  def shape: List[Int] = data.shape.toList
 
   // def backward(gradOutput: Variable = Variable(ns.ones(data.shape))): Unit = {
-
-  def shape: List[Int] = data.shape.toList
 
   def backward(): Unit = {
     logger.debug(s"no gradient output passed, initializing shape $shape")
@@ -20,7 +18,6 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None) extends LazyL
   }
 
   def backward(gradOutput: Variable): Unit = {
-
     logger.debug(s"gradient output shape: ${gradOutput.shape}")
 
     if (g.isEmpty) {
