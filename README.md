@@ -17,10 +17,15 @@ val nf2 = 20
 case class Net() extends Module {
   val fc1 = Linear(nf1, nf2) // an affine operation: y = Wx + b
   val fc2 = Linear(nf2, numClasses) // another one
+  
+  // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
   override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+  
+  // register the submodules to allow the world know what this net is composed of
   override def subModules(): Seq[Module] = Seq(fc1, fc2)
 }
 
+// instantiate
 val net = Net()
 
 // create an optimizer for updating the parameters

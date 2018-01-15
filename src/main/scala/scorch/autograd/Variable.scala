@@ -4,7 +4,8 @@ import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
 
-case class Variable(data: Tensor, gradFn: Option[Function] = None) extends LazyLogging {
+case class Variable(data: Tensor, gradFn: Option[Function] = None)
+    extends LazyLogging {
 
   var g: Option[Tensor] = None
   def grad: Option[Variable] = g.map(Variable(_))
@@ -20,11 +21,13 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None) extends LazyL
 
     if (g.isEmpty) {
       g = Some(ns.zeros(gradOutput.data.shape))
-      logger.debug(s"g not yet initialized, setting shape ${g.get.shape.toList}")
+      logger.debug(
+        s"g not yet initialized, setting shape ${g.get.shape.toList}")
     }
 
-    if (! g.get.sameShape(data)) {
-      logger.warn(s"g and data have different shapes: g: ${g.get.shape.toList}, data: ${data.shape.toList}")
+    if (!g.get.sameShape(data)) {
+      logger.warn(
+        s"g and data have different shapes: g: ${g.get.shape.toList}, data: ${data.shape.toList}")
     }
 
     g.get += gradOutput.data
