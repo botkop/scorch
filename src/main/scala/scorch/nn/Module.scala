@@ -12,21 +12,6 @@ trait Module extends LazyLogging {
   def parameters(): Seq[Variable] = subModules().flatMap(_.parameters())
 }
 
-/*
-abstract class Module(subModules: Module*) {
-  def parameters(): Seq[Variable] = subModules.flatMap(_.parameters())
-  def forward(x: Variable): Variable
-  def apply(x: Variable): Variable = forward(x)
-}
-
-abstract class AbstractModule(subModules: Seq[Module]) extends Module {
-}
-
-case class AAA(override val subModules: Seq[Module]) extends AbstractModule(subModules) {
-  override def forward(x: Variable): Variable = ???
-}
-*/
-
 case class Linear(inFeatures: Int, outFeatures: Int) extends Module {
   val w: Tensor = ns.randn(outFeatures, inFeatures) * math.sqrt(2.0 / outFeatures)
   val weights = Variable(w)
@@ -42,3 +27,8 @@ case class Linear(inFeatures: Int, outFeatures: Int) extends Module {
 case class Relu() extends Module {
   override def forward(x: Variable): Variable = x.threshold(0)
 }
+
+case class Dropout(p: Double = 0.5) extends Module {
+  override def forward(x: Variable): Variable = x.dropout(p)
+}
+

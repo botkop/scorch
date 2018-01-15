@@ -71,7 +71,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
       override def subModules(): Seq[Module] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+      override def forward(x: Variable): Variable = fc2(nn.dropout(nn.relu(fc1(x))))
     }
 
     val n = Net()

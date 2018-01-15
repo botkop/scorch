@@ -39,8 +39,7 @@ case class Add(v1: Variable, v2: Variable) extends Function {
 case class AddConstant(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(v.data + d, Some(this))
   override def backward(gradOutput: Variable): Unit = {
-    logger.debug(
-      s"add constant backward, g.shape=${gradOutput.shape}")
+    logger.debug(s"add constant backward, g.shape=${gradOutput.shape}")
     v.backward(gradOutput)
   }
 }
@@ -57,8 +56,7 @@ case class Sub(v1: Variable, v2: Variable) extends Function {
 case class SubConstant(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(v.data + d, Some(this))
   override def backward(gradOutput: Variable): Unit = {
-    logger.debug(
-      s"sub constant backward, g.shape=${gradOutput.shape}")
+    logger.debug(s"sub constant backward, g.shape=${gradOutput.shape}")
     v.backward(gradOutput)
   }
 }
@@ -120,8 +118,7 @@ case class Pow(a: Variable, b: Variable) extends Function {
     val vga = unbroadcast(ga, a.shape)
     val vgb = unbroadcast(gb, b.shape)
 
-    logger.debug(
-      s"pow backward, ga.shape=${vga.shape}, gb.shape=${vgb.shape}")
+    logger.debug(s"pow backward, ga.shape=${vga.shape}, gb.shape=${vgb.shape}")
     a.backward(vga)
     b.backward(vgb)
   }
@@ -205,6 +202,15 @@ case class Threshold(x: Variable, d: Double) extends Function {
   override def backward(gradOutput: Variable): Unit = {
     x.backward(Variable(gradOutput.data * (x.data > d)))
   }
+}
+
+case class Dropout(x: Variable, p: Double = 0.5) extends Function {
+  val mask: Tensor = (ns.rand(x.shape: _*) < p) / p
+
+  override def forward(): Variable = Variable(x.data * mask, Some(this))
+
+  override def backward(gradOutput: Variable): Unit =
+    x.backward(Variable(gradOutput.data * mask))
 }
 
 //============================================

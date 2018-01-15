@@ -2,7 +2,7 @@ package scorch.nn
 
 import botkop.numsca.Tensor
 import scorch.autograd.Variable
-import botkop.{numsca, numsca => ns}
+import botkop.{numsca => ns}
 
 abstract class Optimizer(parameters: Seq[Variable]) {
   def step(): Unit
@@ -54,10 +54,10 @@ case class Adam(parameters: Seq[Variable],
       val mt = m / (1 - math.pow(beta1, t))
 
       v *= beta2
-      v += (1 - beta2) * numsca.square(dx)
+      v += (1 - beta2) * ns.square(dx)
       val vt = v / (1 - math.pow(beta2, t))
 
-      x -= lr * mt / (numsca.sqrt(vt) + epsilon)
+      x -= lr * mt / (ns.sqrt(vt) + epsilon)
 
       t += 1
   }
