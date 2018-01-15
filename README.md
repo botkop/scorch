@@ -61,10 +61,18 @@ for (j <- 0 to 1000) {
 }
 ```
 
-### References
+## Dependency
+Add this to build.sbt:
+```scala
+libraryDependencies += "be.botkop" %% "scorch" % "0.1.0-SNAPSHOT"
+```
+
+Scorch uses [numsca](https://github.com/botkop/numsca)
+
+## References
+- [Deep Learning with PyTorch: A 60 Minute Blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html)
+- [Backpropagation, Intuitions](http://cs231n.github.io/optimization-2/)
 - [Automatic Differentiation in Machine Learning: a Survey](https://arxiv.org/pdf/1502.05767.pdf)
 - [Automatic differentiation](http://www.pvv.ntnu.no/~berland/resources/autodiff-triallecture.pdf)
 - [Derivative Calculator with step-by-step Explanations](http://calculus-calculator.com/derivative/)
-- [Backpropagation, Intuitions](http://cs231n.github.io/optimization-2/)
 - [Differentiation rules](https://en.wikipedia.org/wiki/Differentiation_rules)
-- [Deep Learning with PyTorch: A 60 Minute Blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html)
