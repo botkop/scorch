@@ -21,7 +21,7 @@ case class Net() extends Module {
   // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
   override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
   
-  // register the submodules to allow the world know what this net is composed of
+  // register the submodules to allow the world to know what this net is composed of
   override def subModules(): Seq[Module] = Seq(fc1, fc2)
 }
 
