@@ -1,7 +1,7 @@
 package scorch
 
 import scorch.autograd.Variable
-import scorch.nn.{Linear, Module, SGD}
+import scorch.nn._
 import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -9,7 +9,7 @@ import scala.util.Random
 
 class ModuleSpec extends FlatSpec with Matchers {
 
-  "A Module" should "compute a simple linear network" in {
+  "A Module" should "compute a single pass through a linear network" in {
 
     val numSamples = 16
     val numFeatures = 20
@@ -27,7 +27,7 @@ class ModuleSpec extends FlatSpec with Matchers {
 
   }
 
-  it should "evaluate the loss" in {
+  it should "evaluate the softmax loss" in {
     val numSamples = 16
     val numFeatures = 20
     val numClasses = 10
@@ -40,8 +40,6 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     val loss = nn.softmax(out, target)
 
-    println(loss.data)
-
     loss.backward()
 
     fc.parameters().foreach { p =>
@@ -51,17 +49,15 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     input.grad.get.data.shape shouldBe Array(numSamples, numFeatures)
-    //println(input.grad.get)
-    //println(fc.weights.grad)
 
   }
 
-  it should "say miauou" in {
+  it should "compute a 2 layer fc network with sgd optimizer" in {
     ns.rand.setSeed(231)
     Random.setSeed(231)
 
-    val numSamples = 128
-    val numClasses = 10
+    val numSamples = 16
+    val numClasses = 5
     val nf1 = 40
     val nf2 = 20
 
@@ -71,16 +67,16 @@ class ModuleSpec extends FlatSpec with Matchers {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
       override def subModules(): Seq[Module] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(nn.dropout(nn.relu(fc1(x))))
+      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
     }
 
     val n = Net()
 
-    val optimizer = SGD(n.parameters(), lr = 0.01)
+    val optimizer = SGD(n.parameters(), lr = 1)
 
     val input = Variable(ns.randn(numSamples, nf1))
 
-    for (j <- 0 to 1000) {
+    for (j <- 0 to 500) {
 
       optimizer.zeroGrad()
 
@@ -96,5 +92,165 @@ class ModuleSpec extends FlatSpec with Matchers {
       loss.backward()
       optimizer.step()
     }
+
+    val output = n(input)
+    val loss = nn.softmax(output, target)
+    val guessed = ns.argmax(output.data, axis = 1)
+    val accuracy = ns.sum(target.data == guessed) / numSamples
+
+    accuracy should be > 0.8
+    loss.data.squeeze should be < 1e-3
   }
+
+  it should "compute a 2 layer fc network with adam optimizer" in {
+    ns.rand.setSeed(231)
+    Random.setSeed(231)
+
+    val numSamples = 16
+    val numClasses = 10
+    val nf1 = 40
+    val nf2 = 20
+
+    val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+
+    case class Net() extends Module {
+      val fc1 = Linear(nf1, nf2)
+      val fc2 = Linear(nf2, numClasses)
+      override def subModules(): Seq[Module] = Seq(fc1, fc2)
+      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+    }
+
+    val n = Net()
+
+    val optimizer = Adam(n.parameters(), lr = 0.01)
+
+    val input = Variable(ns.randn(numSamples, nf1))
+
+    for (j <- 0 to 500) {
+
+      optimizer.zeroGrad()
+
+      val output = n(input)
+      val loss = nn.softmax(output, target)
+
+      if (j % 100 == 0) {
+        val guessed = ns.argmax(output.data, axis = 1)
+        val accuracy = ns.sum(target.data == guessed) / numSamples
+        println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+      }
+
+      loss.backward()
+      optimizer.step()
+    }
+
+    val output = n(input)
+    val loss = nn.softmax(output, target)
+    val guessed = ns.argmax(output.data, axis = 1)
+    val accuracy = ns.sum(target.data == guessed) / numSamples
+
+    accuracy should be > 0.6
+    loss.data.squeeze should be < 1e-3
+  }
+
+  it should "compute a 2 layer fc network with nesterov optimizer" in {
+    ns.rand.setSeed(231)
+    Random.setSeed(231)
+
+    val numSamples = 128
+    val numClasses = 10
+    val nf1 = 40
+    val nf2 = 20
+
+    val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+
+    case class Net() extends Module {
+      val fc1 = Linear(nf1, nf2)
+      val fc2 = Linear(nf2, numClasses)
+      override def subModules(): Seq[Module] = Seq(fc1, fc2)
+      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+    }
+
+    val n = Net()
+
+    val optimizer = Nesterov(n.parameters(), lr = 0.01)
+
+    val input = Variable(ns.randn(numSamples, nf1))
+
+    for (j <- 0 to 500) {
+
+      optimizer.zeroGrad()
+
+      val output = n(input)
+      val loss = nn.softmax(output, target)
+
+      if (j % 100 == 0) {
+        val guessed = ns.argmax(output.data, axis = 1)
+        val accuracy = ns.sum(target.data == guessed) / numSamples
+        println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+      }
+
+      loss.backward()
+      optimizer.step()
+    }
+
+    val output = n(input)
+    val loss = nn.softmax(output, target)
+    val guessed = ns.argmax(output.data, axis = 1)
+    val accuracy = ns.sum(target.data == guessed) / numSamples
+
+    accuracy should be > 0.7
+    loss.data.squeeze should be < 0.3
+  }
+
+  it should "compute a 2 layer fc network with sgd optimizer and dropout" in {
+    ns.rand.setSeed(231)
+    Random.setSeed(231)
+
+    val numSamples = 16
+    val numClasses = 5
+    val nf1 = 40
+    val nf2 = 20
+
+    val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+
+    case class Net() extends Module {
+      val fc1 = Linear(nf1, nf2)
+      val fc2 = Linear(nf2, numClasses)
+      override def subModules(): Seq[Module] = Seq(fc1, fc2)
+      override def forward(x: Variable): Variable = fc2(dropout(nn.relu(fc1(x)), p = 0.2, train = true))
+    }
+
+    val n = Net()
+
+    val optimizer = SGD(n.parameters(), lr = 1)
+
+    val input = Variable(ns.randn(numSamples, nf1))
+
+    for (j <- 0 to 500) {
+
+      optimizer.zeroGrad()
+
+      val output = n(input)
+      val loss = nn.softmax(output, target)
+
+      if (j % 100 == 0) {
+        val guessed = ns.argmax(output.data, axis = 1)
+        val accuracy = ns.sum(target.data == guessed) / numSamples
+        println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+      }
+
+      loss.backward()
+      optimizer.step()
+    }
+
+    val output = n(input)
+    val loss = nn.softmax(output, target)
+    val guessed = ns.argmax(output.data, axis = 1)
+    val accuracy = ns.sum(target.data == guessed) / numSamples
+
+    accuracy should be > 0.8
+    loss.data.squeeze should be < 1e-3
+
+  }
+
 }

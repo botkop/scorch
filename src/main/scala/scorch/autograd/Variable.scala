@@ -53,7 +53,7 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None)
   def t(): Variable = Transpose(this).forward()
 
   def threshold(d: Double): Variable = Threshold(this, d).forward()
-  def dropout(p: Double = 0.5): Variable = Dropout(this, p).forward()
+  def dropout(p: Double = 0.5, train: Boolean): Variable = Dropout(this, p, train).forward()
 }
 
 object Variable {

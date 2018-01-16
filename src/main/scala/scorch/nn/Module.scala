@@ -28,7 +28,7 @@ case class Relu() extends Module {
   override def forward(x: Variable): Variable = x.threshold(0)
 }
 
-case class Dropout(p: Double = 0.5) extends Module {
-  override def forward(x: Variable): Variable = x.dropout(p)
+case class Dropout(p: Double = 0.5, train: Boolean) extends Module {
+  override def forward(x: Variable): Variable = x.dropout(p, train)
 }
 

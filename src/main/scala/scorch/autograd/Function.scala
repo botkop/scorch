@@ -204,13 +204,25 @@ case class Threshold(x: Variable, d: Double) extends Function {
   }
 }
 
-case class Dropout(x: Variable, p: Double = 0.5) extends Function {
+case class Dropout(x: Variable, p: Double = 0.5, train: Boolean = false)
+    extends Function {
+
+  require(p > 0 && p < 1,
+          s"dropout probability has to be between 0 and 1, but got $p")
+
   val mask: Tensor = (ns.rand(x.shape: _*) < p) / p
 
-  override def forward(): Variable = Variable(x.data * mask, Some(this))
+  override def forward(): Variable =
+    if (train)
+      Variable(x.data * mask, Some(this))
+    else
+      Variable(x.data, Some(this))
 
   override def backward(gradOutput: Variable): Unit =
-    x.backward(Variable(gradOutput.data * mask))
+    if (train)
+      x.backward(Variable(gradOutput.data * mask))
+    else
+      x.backward(gradOutput)
 }
 
 //============================================
