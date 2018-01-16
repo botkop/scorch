@@ -206,8 +206,8 @@ class ModuleSpec extends FlatSpec with Matchers {
     ns.rand.setSeed(231)
     Random.setSeed(231)
 
-    val numSamples = 16
-    val numClasses = 5
+    val numSamples = 32
+    val numClasses = 10
     val nf1 = 40
     val nf2 = 20
 
@@ -216,17 +216,21 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules(): Seq[Module] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(dropout(nn.relu(fc1(x)), p = 0.2, train = true))
+      val dropout = Dropout(p = 0.9)
+
+      override def subModules(): Seq[Module] = Seq(fc1, fc2, dropout)
+
+      override def forward(x: Variable): Variable = fc2(relu(dropout(fc1(x))))
     }
 
     val n = Net()
+    n.train()
 
-    val optimizer = SGD(n.parameters(), lr = 1)
+    val optimizer = SGD(n.parameters(), lr = 0.1)
 
     val input = Variable(ns.randn(numSamples, nf1))
 
-    for (j <- 0 to 500) {
+    for (j <- 0 to 5000) {
 
       optimizer.zeroGrad()
 
@@ -243,6 +247,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.step()
     }
 
+    n.eval()
     val output = n(input)
     val loss = nn.softmax(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
