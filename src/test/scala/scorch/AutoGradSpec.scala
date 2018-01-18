@@ -131,4 +131,24 @@ class AutoGradSpec extends FlatSpec with Matchers {
     assert(ns.arrayEqual(x.grad.get.data, Tensor(6.4, 64, 0.0064)))
   }
 
+  it should "derive mse" in {
+    val nOut = 4
+    val minibatch = 3
+
+    val input  = Variable(ns.randn(minibatch, nOut))
+    val label = Variable(ns.randn(minibatch, nOut))
+
+    val diff = input - label
+    val sqDiff = diff * diff
+    val msePerEx = mean(sqDiff)
+    val avgMSE = mean(msePerEx)
+
+    avgMSE.shape shouldBe List(1, 1)
+
+    avgMSE.backward()
+
+    input.grad.get.shape shouldBe input.shape
+
+  }
+
 }
