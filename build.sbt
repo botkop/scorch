@@ -1,5 +1,9 @@
 import Dependencies._
 
+resolvers +=
+  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+classpathTypes += "maven-plugin"
+
 lazy val root = (project in file(".")).settings(
   inThisBuild(
     List(
@@ -9,6 +13,8 @@ lazy val root = (project in file(".")).settings(
     )),
   name := "scorch",
   libraryDependencies += numsca,
+  libraryDependencies += "org.nd4j" % "nd4j-native" % "0.9.2-SNAPSHOT",
+  // libraryDependencies += "org.nd4j" % "nd4j-native-platform" % "0.9.2-SNAPSHOT",
   libraryDependencies += scalaTest % Test
 )
 
