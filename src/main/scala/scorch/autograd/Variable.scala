@@ -49,11 +49,7 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None)
   def /(d: Double): Variable = DivConstant(this, d).forward()
   def **(d: Double): Variable = PowConstant(this, d).forward()
 
-  def mean(): Variable = Mean(this).forward()
   def t(): Variable = Transpose(this).forward()
-
-  def threshold(d: Double): Variable = Threshold(this, d).forward()
-  def dropout(p: Double = 0.5, train: Boolean): Variable = Dropout(this, p, train).forward()
 }
 
 object Variable {

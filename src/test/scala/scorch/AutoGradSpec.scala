@@ -115,7 +115,7 @@ class AutoGradSpec extends FlatSpec with Matchers {
     val x = Variable(ns.ones(2, 2))
     val y = x + 2
     val z = y * y * 3
-    val out = z.mean()
+    val out = mean(z)
     out.backward()
     println(x.grad.get.data)
     assert(ns.arrayEqual(x.grad.get.data, ns.full(x.data.shape, 4.5)))

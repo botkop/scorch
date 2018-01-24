@@ -177,6 +177,20 @@ case class Exp(v: Variable) extends Function {
   }
 }
 
+case class Tanh(v: Variable) extends Function {
+  val cache: Tensor = ns.tanh(v.data)
+  override def forward(): Variable = Variable(cache, Some(this))
+  override def backward(gradOutput: Variable): Unit =
+    v.backward(Variable(1 - ns.square(cache)))
+}
+
+case class Sigmoid(v: Variable) extends Function {
+  val cache: Tensor = ns.sigmoid(v.data)
+  override def forward(): Variable = Variable(cache, Some(this))
+  override def backward(gradOutput: Variable): Unit =
+    v.backward(Variable(cache * (1 - cache)))
+}
+
 case class Mean(v: Variable) extends Function {
   def forward() = Variable(data = ns.mean(v.data), gradFn = Some(this))
   def backward(gradOutput: Variable): Unit = {
@@ -204,7 +218,7 @@ case class Threshold(x: Variable, d: Double) extends Function {
   }
 }
 
-case class Dropout(x: Variable, p: Double = 0.5, train: Boolean = false)
+case class DropoutFunction(x: Variable, p: Double = 0.5, train: Boolean = false)
     extends Function {
 
   require(p > 0 && p < 1,
@@ -223,6 +237,7 @@ case class Dropout(x: Variable, p: Double = 0.5, train: Boolean = false)
       x.backward(Variable(gradOutput.data * mask))
     else
       x.backward(gradOutput)
+
 }
 
 //============================================

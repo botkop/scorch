@@ -1,9 +1,10 @@
 package scorch.nn
 
-import scorch.autograd.Variable
+import scorch.autograd.{DropoutFunction, Threshold, Variable}
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
+import scorch.autograd
 
 trait Module extends LazyLogging {
 
@@ -19,7 +20,7 @@ trait Module extends LazyLogging {
    */
   def train(mode: Boolean = true): Unit = {
     this.inTrainingMode = mode
-    subModules().foreach(_.inTrainingMode = mode)
+    subModules().foreach(_.train(mode))
   }
 
   /*
@@ -35,7 +36,8 @@ trait Module extends LazyLogging {
 }
 
 case class Linear(inFeatures: Int, outFeatures: Int) extends Module {
-  val w: Tensor = ns.randn(outFeatures, inFeatures) * math.sqrt(2.0 / outFeatures)
+  val w: Tensor =
+    ns.randn(outFeatures, inFeatures) * math.sqrt(2.0 / outFeatures)
   val weights = Variable(w)
   val b: Tensor = ns.zeros(1, outFeatures)
   val bias = Variable(b)
@@ -47,10 +49,10 @@ case class Linear(inFeatures: Int, outFeatures: Int) extends Module {
 }
 
 case class Relu() extends Module {
-  override def forward(x: Variable): Variable = x.threshold(0)
+  override def forward(x: Variable): Variable = Threshold(x, 0).forward()
 }
 
 case class Dropout(p: Double = 0.5) extends Module {
-  override def forward(x: Variable): Variable = x.dropout(p, inTrainingMode)
+  override def forward(x: Variable): Variable =
+    DropoutFunction(x, p, inTrainingMode).forward()
 }
-

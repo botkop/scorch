@@ -11,5 +11,7 @@ package object autograd {
 
   def exp(v: Variable): Variable = Exp(v).forward()
   def mean(v: Variable): Variable = Mean(v).forward()
+  def sigmoid(v: Variable): Variable = Sigmoid(v).forward()
+  def tanh(v: Variable): Variable = Tanh(v).forward()
 
 }
