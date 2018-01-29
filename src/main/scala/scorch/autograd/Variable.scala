@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 case class Variable(data: Tensor, gradFn: Option[Function] = None)
     extends LazyLogging {
 
-  var g: Option[Tensor] = None
+  private var g: Option[Tensor] = None
   def grad: Option[Variable] = g.map(Variable(_))
   def shape: List[Int] = data.shape.toList
 

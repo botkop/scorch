@@ -150,14 +150,14 @@ case class Dot(v1: Variable, v2: Variable) extends Function {
   override def forward(): Variable = Variable(w dot x, Some(this))
   override def backward(gradOutput: Variable): Unit = {
     val dd = gradOutput.data
-    val dv1 = dd dot x.T
-    val dv2 = w.T dot dd
+    val dw = dd dot x.T
+    val dx = w.T dot dd
 
     logger.debug(
-      s"dot backward, dv1.shape=${dv1.shape.toList}, dv2.shape=${dv2.shape.toList}")
+      s"dot backward, dw.shape=${dw.shape.toList}, dx.shape=${dx.shape.toList}")
 
-    v1.backward(Variable(dv1))
-    v2.backward(Variable(dv2))
+    v1.backward(Variable(dw))
+    v2.backward(Variable(dx))
   }
 }
 
@@ -181,7 +181,7 @@ case class Tanh(v: Variable) extends Function {
   val cache: Tensor = ns.tanh(v.data)
   override def forward(): Variable = Variable(cache, Some(this))
   override def backward(gradOutput: Variable): Unit =
-    v.backward(Variable(1 - ns.square(cache)))
+    v.backward(Variable((1 - ns.square(cache)) * gradOutput.data))
 }
 
 case class Sigmoid(v: Variable) extends Function {
