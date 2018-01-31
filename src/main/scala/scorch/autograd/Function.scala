@@ -115,6 +115,9 @@ case class Pow(a: Variable, b: Variable) extends Function {
     val ga = gradOutput.data * b.data * (a.data ** (b.data - 1))
     val gb = gradOutput.data * (a.data ** b.data) * ns.log(a.data)
 
+    // grad_a = grad_output.mul(b).mul(a.pow(b - 1))
+    // grad_b = grad_output.mul(a.pow(b)).mul(a.log())
+
     val vga = unbroadcast(ga, a.shape)
     val vgb = unbroadcast(gb, b.shape)
 
@@ -188,7 +191,7 @@ case class Sigmoid(v: Variable) extends Function {
   val cache: Tensor = ns.sigmoid(v.data)
   override def forward(): Variable = Variable(cache, Some(this))
   override def backward(gradOutput: Variable): Unit =
-    v.backward(Variable(cache * (1 - cache)))
+    v.backward(Variable(gradOutput.data * cache * (1 - cache)))
 }
 
 case class Mean(v: Variable) extends Function {
