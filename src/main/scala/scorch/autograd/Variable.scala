@@ -38,7 +38,7 @@ case class Variable(data: Tensor, gradFn: Option[Function] = None)
   def -(other: Variable): Variable = Sub(this, other).forward()
   def *(other: Variable): Variable = Mul(this, other).forward()
   def /(other: Variable): Variable = Div(this, other).forward()
-  def **(other: Variable): Variable = Pow(this, other).forward()
+  // def **(other: Variable): Variable = Pow(this, other).forward()
 
   def dot(other: Variable): Variable = Dot(this, other).forward()
 

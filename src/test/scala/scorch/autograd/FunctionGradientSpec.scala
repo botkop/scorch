@@ -5,6 +5,7 @@ import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.ops.transforms.Transforms
 import org.scalatest._
 import scorch.TestUtil._
 
@@ -75,15 +76,7 @@ class FunctionGradientSpec
     binOpGradientCheck(f, a, b)
   }
 
-  "Pow" should "calculate gradients" in {
-    val a = Variable(ns.abs(ns.randn(3, 4)))
-    // val b = Variable(ns.abs(ns.randint(3, 3, 4)))
-    val b = Variable(2)
-    def f(v1: Variable, v2: Variable): Variable = Pow(v1, v2).forward()
-    binOpGradientCheck(f, a, b)
-  }
-
-  it should "calculate gradients with a const" in {
+  "Pow" should "calculate gradients with a const" in {
     val a = Variable(ns.abs(ns.randn(4, 6)))
     val b = 3.0
     def f(a: Variable, b: Double): Variable = PowConstant(a, b).forward()
@@ -137,19 +130,44 @@ class FunctionGradientSpec
 
   "Dropout" should "calculate gradients" in {
     val a = Variable(ns.randn(4, 6))
-    def f(a: Variable): Variable = DropoutFunction(a, train = false).forward()
+
+    val p = 0.5
+    val mask: Tensor = (ns.rand(a.shape: _*) < p) / p
+
+    def f(a: Variable): Variable =
+      DropoutFunction(a, train = true, maybeMask = Some(mask)).forward()
     oneOpGradientCheck(f, a)
   }
 
+  "adasdad" should "asdasda" in {
+//    val a = ns.log(Tensor(5))
+//    println(a)
+//
+//    val t1 = Tensor(3, 3).reshape(1, 2)
+//    val t2 = Tensor(5, 5).reshape(1, 2)
+//    val b = t1 ** t2
+//    println(t1)
+//    println(t2)
+//    println(b)
+
+
+    {
+      val a = Nd4j.create(Array(3.0, 3.0))
+      val b = Nd4j.create(Array(5.0, 6.0))
+      val c = Transforms.pow(a, b)
+      println(c)
+    }
+  }
 
   def binOpGradientCheck(f: (Variable, Variable) => Variable,
                          a: Variable,
-                         b: Variable): Assertion = {
+                         b: Variable,
+                         dOutOpt: Option[Variable] = None): Assertion = {
 
     val out = f(a, b)
     logger.debug(s"out = $out")
 
-    val dOut = Variable(ns.randn(out.shape: _*))
+    val dOut = dOutOpt.getOrElse(Variable(ns.abs(ns.randn(out.shape: _*))))
     logger.debug(s"dOut = $dOut")
 
     out.backward(dOut)
@@ -202,8 +220,7 @@ class FunctionGradientSpec
     assert(daError < 1e-5)
   }
 
-  def oneOpGradientCheck(f: (Variable) => Variable,
-                         a: Variable): Assertion = {
+  def oneOpGradientCheck(f: (Variable) => Variable, a: Variable): Assertion = {
 
     val out = f(a)
     logger.debug(s"out = $out")

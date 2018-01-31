@@ -109,14 +109,17 @@ case class DivConstant(v: Variable, d: Double) extends Function {
   }
 }
 
+/* Pow of 2 tensors is currently not implemented in numsca
 case class Pow(a: Variable, b: Variable) extends Function {
-  override def forward(): Variable = Variable(a.data ** b.data, Some(this))
-  override def backward(gradOutput: Variable): Unit = {
-    val ga = gradOutput.data * b.data * (a.data ** (b.data - 1))
-    val gb = gradOutput.data * (a.data ** b.data) * ns.log(a.data)
 
-    // grad_a = grad_output.mul(b).mul(a.pow(b - 1))
-    // grad_b = grad_output.mul(a.pow(b)).mul(a.log())
+
+  override def forward(): Variable = {
+    Variable(a.data ** b.data, Some(this))
+  }
+
+  override def backward(gradOutput: Variable): Unit = {
+     val ga = gradOutput.data * b.data * (a.data ** (b.data - 1))
+     val gb = gradOutput.data * (a.data ** b.data) * ns.log(a.data)
 
     val vga = unbroadcast(ga, a.shape)
     val vgb = unbroadcast(gb, b.shape)
@@ -126,6 +129,7 @@ case class Pow(a: Variable, b: Variable) extends Function {
     b.backward(vgb)
   }
 }
+*/
 
 case class PowConstant(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(ns.power(v.data, d), Some(this))
@@ -221,13 +225,19 @@ case class Threshold(x: Variable, d: Double) extends Function {
   }
 }
 
-case class DropoutFunction(x: Variable, p: Double = 0.5, train: Boolean = false)
+case class DropoutFunction(x: Variable,
+                           p: Double = 0.5,
+                           train: Boolean = false,
+                           maybeMask: Option[Tensor] = None)
     extends Function {
 
   require(p > 0 && p < 1,
           s"dropout probability has to be between 0 and 1, but got $p")
 
-  val mask: Tensor = (ns.rand(x.shape: _*) < p) / p
+  // maybeMask can be provided for testing purposes
+  val mask: Tensor = maybeMask.getOrElse {
+    (ns.rand(x.shape: _*) < p) / p
+  }
 
   override def forward(): Variable =
     if (train)
@@ -240,7 +250,6 @@ case class DropoutFunction(x: Variable, p: Double = 0.5, train: Boolean = false)
       x.backward(Variable(gradOutput.data * mask))
     else
       x.backward(gradOutput)
-
 }
 
 //============================================
