@@ -5,7 +5,6 @@ import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
-import org.nd4j.linalg.ops.transforms.Transforms
 import org.scalatest._
 import scorch.TestUtil._
 
@@ -137,111 +136,6 @@ class FunctionGradientSpec
     def f(a: Variable): Variable =
       DropoutFunction(a, train = true, maybeMask = Some(mask)).forward()
     oneOpGradientCheck(f, a)
-  }
-
-  "adasdad" should "asdasda" in {
-//    val a = ns.log(Tensor(5))
-//    println(a)
-//
-//    val t1 = Tensor(3, 3).reshape(1, 2)
-//    val t2 = Tensor(5, 5).reshape(1, 2)
-//    val b = t1 ** t2
-//    println(t1)
-//    println(t2)
-//    println(b)
-
-
-    {
-      val a = Nd4j.create(Array(3.0, 3.0))
-      val b = Nd4j.create(Array(5.0, 6.0))
-      val c = Transforms.pow(a, b)
-      println(c)
-    }
-  }
-
-  def binOpGradientCheck(f: (Variable, Variable) => Variable,
-                         a: Variable,
-                         b: Variable,
-                         dOutOpt: Option[Variable] = None): Assertion = {
-
-    val out = f(a, b)
-    logger.debug(s"out = $out")
-
-    val dOut = dOutOpt.getOrElse(Variable(ns.abs(ns.randn(out.shape: _*))))
-    logger.debug(s"dOut = $dOut")
-
-    out.backward(dOut)
-
-    val da = a.grad.get.data
-    val db = b.grad.get.data
-
-    logger.debug(s"da = $da")
-    logger.debug(s"db = $db")
-
-    def fa(t: Tensor) = f(Variable(t), b).data
-    def fb(t: Tensor) = f(a, Variable(t)).data
-
-    val daNum = evalNumericalGradientArray(fa, a.data, dOut.data)
-    val dbNum = evalNumericalGradientArray(fb, b.data, dOut.data)
-
-    logger.debug(s"daNum = $daNum")
-    logger.debug(s"dbNum = $dbNum")
-
-    val daError = relError(da, daNum)
-    val dbError = relError(db, dbNum)
-
-    logger.debug(s"daError = $daError")
-    logger.debug(s"dbError = $dbError")
-
-    assert(daError < 1e-5)
-    assert(dbError < 1e-5)
-  }
-
-  def varConstOpGradientCheck(f: (Variable, Double) => Variable,
-                              a: Variable,
-                              b: Double): Assertion = {
-    val out = f(a, b)
-    logger.debug(s"out = $out")
-
-    val dOut = Variable(ns.randn(out.shape: _*))
-    logger.debug(s"dOut = $dOut")
-
-    out.backward(dOut)
-    val da = a.grad.get.data
-    logger.debug(s"da = $da")
-
-    def fa(t: Tensor) = f(Variable(t), b).data
-    val daNum = evalNumericalGradientArray(fa, a.data, dOut.data)
-    logger.debug(s"daNum = $daNum")
-
-    val daError = relError(da, daNum)
-    logger.debug(s"daError = $daError")
-
-    assert(daError < 1e-5)
-  }
-
-  def oneOpGradientCheck(f: (Variable) => Variable, a: Variable): Assertion = {
-
-    val out = f(a)
-    logger.debug(s"out = $out")
-
-    val dOut = Variable(ns.randn(out.shape: _*))
-    logger.debug(s"dOut = $dOut")
-
-    out.backward(dOut)
-
-    val da = a.grad.get.data
-    logger.debug(s"da = $da")
-
-    def fa(t: Tensor) = f(Variable(t)).data
-
-    val daNum = evalNumericalGradientArray(fa, a.data, dOut.data)
-    logger.debug(s"daNum = $daNum")
-
-    val daError = relError(da, daNum)
-    logger.debug(s"daError = $daError")
-
-    assert(daError < 1e-5)
   }
 
 }
