@@ -7,6 +7,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
+import scorch.nn.{Rnn, RnnFunction}
 
 import scala.language.postfixOps
 
@@ -14,47 +15,6 @@ class RnnSpec extends FlatSpec with Matchers {
 
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
   ns.rand.setSeed(231)
-
-  case class Rnn() {
-    def stepForward(x: Variable,
-                    prevH: Variable,
-                    wX: Variable,
-                    wH: Variable,
-                    b: Variable): Variable = {
-
-      // x:     shape(N, D)
-      // prevH: shape(N, H)
-      // wX:    shape(D, H)
-      // wH:    shape(H, H)
-      // b:     shape(H, 1)
-
-      val xWx = x dot wX
-      val prevHwH = prevH dot wH
-      val nextH = tanh(xWx + prevHwH + b)
-      nextH
-    }
-
-    def forward(xs: List[Variable],
-                h0: Variable,
-                wX: Variable,
-                wH: Variable,
-                b: Variable): List[Variable] = {
-      // nSize: minibatch of N sequences
-      // tSize: input sequence composed of T vectors
-      // dSize: dimension of the vector
-      // hSize: hidden size
-
-      xs.foldLeft(List.empty[Variable]) {
-        case (hs: List[Variable], x: Variable) =>
-          hs :+ stepForward(x, hs.lastOption.getOrElse(h0), wX, wH, b)
-      }
-    }
-
-    def backward(gs: List[Variable]): Unit = {
-
-    }
-
-  }
 
   "Rnn" should "step forward" in {
 
@@ -66,7 +26,7 @@ class RnnSpec extends FlatSpec with Matchers {
     val wH = Variable(ns.linspace(-0.3, 0.7, num = h * h).reshape(h, h))
     val b = Variable(ns.linspace(-0.2, 0.4, num = h).reshape(1, h))
 
-    val nextH = Rnn().stepForward(x, prevH, wX, wH, b)
+    val nextH = RnnFunction.stepForward(x, prevH, wX, wH, b)
 
     val expectedNextH = ns
       .array(
@@ -91,8 +51,7 @@ class RnnSpec extends FlatSpec with Matchers {
     val wH = Variable(ns.randn(hSize, hSize))
     val b = Variable(ns.randn(1, hSize))
 
-    val rnn = Rnn()
-    val out = rnn.stepForward(x, h, wX, wH, b)
+    val out = RnnFunction.stepForward(x, h, wX, wH, b)
 
     // loss simulation
     val dNextH = Variable(ns.randn(out.shape: _*))
@@ -105,19 +64,19 @@ class RnnSpec extends FlatSpec with Matchers {
     val db = b.grad.get.data.copy()
 
     def fx(t: Tensor): Tensor =
-      rnn.stepForward(Variable(t), h, wX, wH, b).data
+      RnnFunction.stepForward(Variable(t), h, wX, wH, b).data
 
     def fh(t: Tensor): Tensor =
-      rnn.stepForward(x, Variable(t), wX, wH, b).data
+      RnnFunction.stepForward(x, Variable(t), wX, wH, b).data
 
     def fwX(t: Tensor): Tensor =
-      rnn.stepForward(x, h, Variable(t), wH, b).data
+      RnnFunction.stepForward(x, h, Variable(t), wH, b).data
 
     def fwH(t: Tensor): Tensor =
-      rnn.stepForward(x, h, wX, Variable(t), b).data
+      RnnFunction.stepForward(x, h, wX, Variable(t), b).data
 
     def fb(t: Tensor): Tensor =
-      rnn.stepForward(x, h, wX, wH, Variable(t)).data
+      RnnFunction.stepForward(x, h, wX, wH, Variable(t)).data
 
     val dxNum = evalNumericalGradientArray(fx, x.data, dNextH.data)
     val dhNum = evalNumericalGradientArray(fh, h.data, dNextH.data)
@@ -145,74 +104,83 @@ class RnnSpec extends FlatSpec with Matchers {
   }
 
   it should "forward pass" in {
-
     val (n, t, d, h) = (2, 3, 4, 5)
 
-    val xVector = ns.linspace(-0.1, 0.3, num = n * t * d).reshape(n, t, d)
-
-    val xs: List[Variable] = (0 until t) map { i =>
-      Variable(xVector(:>, i, :>).reshape(n, d))
-    } toList
-
+    val x = Variable(ns.linspace(-0.1, 0.3, num = n * t * d).reshape(n, t, d))
     val h0 = Variable(ns.linspace(-0.3, 0.1, num = n * h).reshape(n, h))
     val wX = Variable(ns.linspace(-0.2, 0.4, num = d * h).reshape(d, h))
     val wH = Variable(ns.linspace(-0.4, 0.1, num = h * h).reshape(h, h))
     val b = Variable(ns.linspace(-0.7, 0.1, num = h))
 
-    val rnn = Rnn()
+    val out = RnnFunction(x, h0, wX, wH, b).forward()
 
-    val hidden = rnn.forward(xs, h0, wX, wH, b)
+    val expectedH = ns
+      .array(-0.42070749, -0.27279261, -0.11074945, 0.05740409, 0.22236251,
+        -0.39525808, -0.22554661, -0.0409454, 0.14649412, 0.32397316,
+        -0.42305111, -0.24223728, -0.04287027, 0.15997045, 0.35014525,
+        -0.55857474, -0.39065825, -0.19198182, 0.02378408, 0.23735671,
+        -0.27150199, -0.07088804, 0.13562939, 0.33099728, 0.50158768,
+        -0.51014825, -0.30524429, -0.06755202, 0.17806392, 0.40333043)
+      .reshape(n, t, h)
 
-    hidden.foreach { h =>
-      println(h.data)
-      println
-    }
-
-    val expectedH = ns.array(
-      -0.42070749, -0.27279261, -0.11074945, 0.05740409, 0.22236251, //
-      -0.39525808, -0.22554661, -0.0409454, 0.14649412, 0.32397316, //
-      -0.42305111, -0.24223728, -0.04287027, 0.15997045, 0.35014525, //
-      //
-      -0.55857474, -0.39065825, -0.19198182, 0.02378408, 0.23735671, //
-      -0.27150199, -0.07088804, 0.13562939, 0.33099728, 0.50158768, //
-      -0.51014825, -0.30524429, -0.06755202, 0.17806392, 0.40333043 //
-    ).reshape(n, t, h)
-
-    for (i <- 0 until t) {
-      val error = relError(hidden(i).data, expectedH(:>, i, :>).reshape(n, h))
-      println(error)
-      assert(error < 1e-7)
-    }
-
+    val error = relError(out.data, expectedH)
+    println(error)
+    assert(error < 1e-7)
   }
 
   it should "backward pass" in {
 
     val (n, d, t, h) = (2, 3, 2, 5)
 
-    val xs: List[Variable] = List.fill(t) {
-      Variable(ns.randn(n, d))
-    }
+    val x = Variable(ns.randn(n, t, d), name = Some("x"))
+    val h0 = Variable(ns.randn(n, h), name = Some("h0"))
+    val wX = Variable(ns.randn(d, h), name = Some("wX"))
+    val wH = Variable(ns.randn(h, h), name = Some("wH"))
+    val b = Variable(ns.randn(h), name = Some("b"))
+    val rnn = RnnFunction(x, h0, wX, wH, b)
 
-    val h0 = Variable(ns.randn(n, h))
-    val wX = Variable(ns.randn(d, h))
-    val wH = Variable(ns.randn(h, h))
-    val b = Variable(ns.randn(h))
-    val rnn = Rnn()
+    val out = rnn.forward()
+    val dOut = Variable(ns.randn(out.shape.toArray))
+    out.backward(dOut)
 
-    val out = rnn.forward(xs, h0, wX, wH, b)
+    /*
+    val dx = x.grad.get.data
+    def fx(t: Tensor): Tensor = RnnFunction(Variable(t), h0, wX, wH, b).forward().data
+    val dxNum = evalNumericalGradientArray(fx, x.data, dOut.data)
+    val dxError = relError(dx, dxNum)
+    println(dxError)
+    assert(dxError < 1e-7)
+    */
 
-    val dOut = List.fill(out.length) {
-      Variable(ns.randn(out.head.shape.toArray))
-    }
+    val dh0 = h0.grad.get.data
+    def fh0(t: Tensor): Tensor = RnnFunction(x, Variable(t), wX, wH, b).forward().data
+    val dh0Num = evalNumericalGradientArray(fh0, h0.data, dOut.data)
+    val dh0Error = relError(dh0, dh0Num)
+    println(dh0Error)
+    assert(dh0Error < 1e-7)
 
-    out.zip(dOut).reverse.foreach { case (o, g) => o.backward(g) }
+    val dwX = wX.grad.get.data
+    def fwX(t: Tensor): Tensor = RnnFunction(x, h0, Variable(t), wH, b).forward().data
+    val dwXNum = evalNumericalGradientArray(fwX, wX.data, dOut.data)
+    val dwXError = relError(dwX, dwXNum)
+    println(dwXError)
+    assert(dwXError < 1e-7)
 
-    // def fh0(t: Tensor): Tensor = rnn.forward(xs, Variable(t), wX, wH, b).head.data
-    // val dFh0 = evalNumericalGradientArray(fh0, h0.data, h0.grad.get.data)
-    // println(dFh0)
+    val dwH = wH.grad.get.data
+    def fwH(t: Tensor): Tensor = RnnFunction(x, h0, wX, Variable(t), b).forward().data
+    val dwHNum = evalNumericalGradientArray(fwH, wH.data, dOut.data)
+    val dwHError = relError(dwH, dwHNum)
+    println(dwHError)
+    assert(dwHError < 1e-7)
 
-    println(h0.grad.get)
+    val db = b.grad.get.data
+    def fb(t: Tensor): Tensor = RnnFunction(x, h0, wX, wH, Variable(t)).forward().data
+    val dbNum = evalNumericalGradientArray(fb, b.data, dOut.data)
+    val dbError = relError(db, dbNum)
+    println(dbError)
+    assert(dbError < 1e-7)
+
+
 
   }
 

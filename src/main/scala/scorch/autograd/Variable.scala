@@ -4,11 +4,11 @@ import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
 
-case class Variable(data: Tensor, gradFn: Option[Function] = None)
+case class Variable(data: Tensor, gradFn: Option[Function] = None, name: Option[String] = None)
     extends LazyLogging {
 
-  private var g: Option[Tensor] = None
-  def grad: Option[Variable] = g.map(Variable(_))
+  private [scorch] var g: Option[Tensor] = None
+  def grad: Option[Variable] = g.map(Variable(_, name = name.map(n => s"g_$n")))
   def shape: List[Int] = data.shape.toList
 
   def backward(): Unit = {

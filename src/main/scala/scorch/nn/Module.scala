@@ -1,12 +1,10 @@
 package scorch.nn
 
-import scorch.autograd.{DropoutFunction, Threshold, Variable}
-import botkop.numsca.Tensor
-import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
-import scorch.autograd
+import scorch.autograd.{DropoutFunction, Threshold, Variable}
 
-trait Module extends LazyLogging {
+abstract class Module(localParameters: Seq[Variable] = Nil)
+    extends LazyLogging {
 
   /*
   Pytorch way of solving distinction between training and test mode is by using a mutable variable.
@@ -32,20 +30,8 @@ trait Module extends LazyLogging {
   def forward(x: Variable): Variable
   def apply(x: Variable): Variable = forward(x)
   def subModules(): Seq[Module] = Seq.empty
-  def parameters(): Seq[Variable] = subModules().flatMap(_.parameters())
-}
-
-case class Linear(inFeatures: Int, outFeatures: Int) extends Module {
-  val w: Tensor =
-    ns.randn(outFeatures, inFeatures) * math.sqrt(2.0 / outFeatures)
-  val weights = Variable(w)
-  val b: Tensor = ns.zeros(1, outFeatures)
-  val bias = Variable(b)
-
-  override def forward(x: Variable): Variable = {
-    x.dot(weights.t()) + bias
-  }
-  override def parameters(): Seq[Variable] = Seq(weights, bias)
+  def parameters(): Seq[Variable] =
+    localParameters ++ subModules().flatMap(_.parameters())
 }
 
 case class Relu() extends Module {
