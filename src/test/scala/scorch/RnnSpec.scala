@@ -143,14 +143,12 @@ class RnnSpec extends FlatSpec with Matchers {
     val dOut = Variable(ns.randn(out.shape.toArray))
     out.backward(dOut)
 
-    /*
     val dx = x.grad.get.data
     def fx(t: Tensor): Tensor = RnnFunction(Variable(t), h0, wX, wH, b).forward().data
     val dxNum = evalNumericalGradientArray(fx, x.data, dOut.data)
     val dxError = relError(dx, dxNum)
     println(dxError)
     assert(dxError < 1e-7)
-    */
 
     val dh0 = h0.grad.get.data
     def fh0(t: Tensor): Tensor = RnnFunction(x, Variable(t), wX, wH, b).forward().data

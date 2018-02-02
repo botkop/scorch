@@ -9,7 +9,6 @@ case class Rnn(h0: Variable, wX: Variable, wH: Variable, b: Variable)
 
   override def forward(x: Variable): Variable =
     RnnFunction(x, h0, wX, wH, b).forward()
-
 }
 
 object Rnn {
@@ -33,9 +32,12 @@ case class RnnFunction(x: Variable,
   val List(n, t, d) = x.shape
   val List(_, h) = h0.shape
 
-  lazy val vs: List[Variable] = (0 until t).foldLeft(List.empty[Variable]) {
-    case (acc, i) =>
-      val v = Variable(x.data(:>, i, :>).reshape(n, d))
+  val xs: Seq[Variable] = (0 until t) map { i =>
+    Variable(x.data(:>, i, :>).reshape(n, d))
+  }
+
+  lazy val vs: List[Variable] = xs.foldLeft(List.empty[Variable]) {
+    case (acc, v) =>
       acc :+ stepForward(v, acc.lastOption.getOrElse(h0), wX, wH, b)
   }
 
@@ -48,17 +50,20 @@ case class RnnFunction(x: Variable,
   }
 
   override def backward(gradOutput: Variable): Unit = {
-    // val gData = ns.zerosLike(gradOutput.data)
     vs.zipWithIndex.reverse.foreach {
       case (v, i) =>
         val gi = Variable(gradOutput.data(:>, i, :>).reshape(v.shape: _*))
         v.backward(gi)
-        // gData(:>, i, :>) := v.grad.get.data.reshape(2, 1, 5)
     }
-    // still need to update x.grad!!!!!!!!!
-    // x.g = Some(gData)
 
+    // still need to update x.grad!!!!!!!!!
+    val gData = ns.zerosLike(x.data)
+    for (i <- 0 until t) {
+      gData(:>, i, :>) := xs(i).g.get
+    }
+    x.g = Some(gData)
   }
+
 }
 
 object RnnFunction {
