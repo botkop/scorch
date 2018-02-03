@@ -1,9 +1,9 @@
-package scorch
+package scorch.nn
 
-import scorch.autograd.Variable
-import scorch.nn._
 import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
+import scorch.autograd.Variable
+import scorch.nn
 
 import scala.util.Random
 

@@ -13,7 +13,7 @@ case class Rnn(h0: Variable, wX: Variable, wH: Variable, b: Variable)
 
 object Rnn {
   def apply(h0: Variable, d: Int): Rnn = {
-    val List(n, h) = h0.shape
+    val List(_, h) = h0.shape
     val wX = Variable(ns.randn(d, h) / math.sqrt(d))
     val wH = Variable(ns.randn(h, h) / math.sqrt(h))
     val b = Variable(ns.zeros(h))
@@ -63,7 +63,6 @@ case class RnnFunction(x: Variable,
     }
     x.g = Some(gData)
   }
-
 }
 
 object RnnFunction {
