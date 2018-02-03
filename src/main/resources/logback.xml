@@ -23,7 +23,7 @@
     </appender>
 
     <logger name="scorch" level="INFO" />
-    <logger name="scorch.autograd.FunctionGradientSpec" level="DEBUG" />
+    <logger name="scorch.TestUtil" level="DEBUG" />
     <logger name="org.nd4j" level="INFO" />
     <logger name="org.reflections" level="ERROR" />
 
