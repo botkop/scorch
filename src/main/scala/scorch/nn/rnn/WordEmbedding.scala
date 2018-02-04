@@ -1,13 +1,15 @@
-package scorch.nn
+package scorch.nn.rnn
 
-import botkop.{numsca => ns}
 import botkop.numsca.Tensor
+import botkop.{numsca => ns}
 import scorch.autograd._
+import scorch.nn.Module
 
 import scala.language.postfixOps
 
 case class WordEmbedding(w: Variable) extends Module(Seq(w)) {
-  override def forward(x: Variable): Variable = WordEmbeddingFunction(x, w).forward()
+  override def forward(x: Variable): Variable =
+    WordEmbeddingFunction(x, w).forward()
 }
 
 case class WordEmbeddingFunction(x: Variable, w: Variable) extends Function {
@@ -17,17 +19,15 @@ case class WordEmbeddingFunction(x: Variable, w: Variable) extends Function {
 
   override def forward(): Variable = {
     // todo: write idiomatic implementation in numsca
-    val out = {
-      for {
-        i <- 0 until n
-        j <- 0 until t
-      } yield {
-        val wix = x.data(i, j).squeeze().toInt
-        w.data(wix).data
-      }
-    } flatten
+    val out = for {
+      i <- 0 until n
+      j <- 0 until t
+    } yield {
+      val wix = x.data(i, j).squeeze().toInt
+      w.data(wix).data
+    }
 
-    val td = Tensor(out.toArray).reshape(n, t, d)
+    val td = Tensor(out.toArray.flatten).reshape(n, t, d)
 
     Variable(td, Some(this))
   }

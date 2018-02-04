@@ -1,4 +1,4 @@
-package scorch.nn
+package scorch.nn.rnn
 
 import botkop.{numsca => ns}
 import org.nd4j.linalg.api.buffer.DataBuffer

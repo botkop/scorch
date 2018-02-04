@@ -1,11 +1,12 @@
-package scorch.nn
+package scorch.nn.rnn
 
 import botkop.numsca.:>
 import botkop.{numsca => ns}
 import scorch.autograd._
+import scorch.nn.Module
 
 case class Rnn(h0: Variable, wX: Variable, wH: Variable, b: Variable)
-    extends Module(Seq(wX, wH, b)) {
+    extends Module(Seq(h0, wX, wH, b)) {
 
   override def forward(x: Variable): Variable =
     RnnFunction(x, h0, wX, wH, b).forward()
