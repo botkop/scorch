@@ -10,6 +10,9 @@ object TestUtil extends LazyLogging {
   def relError(x: Tensor, y: Tensor): Double =
     ns.max(ns.abs(x - y) / ns.maximum(ns.abs(x) + ns.abs(y), 1e-8)).squeeze()
 
+  /**
+    * Evaluate a numeric gradient for a function that accepts an array and returns an array.
+    */
   def evalNumericalGradientArray(f: (Tensor) => Tensor,
                                  x: Tensor,
                                  df: Tensor,
@@ -30,6 +33,35 @@ object TestUtil extends LazyLogging {
 
       val g = ns.sum((pos - neg) * df) / (2.0 * h)
 
+      grad(ix) := g
+    }
+    grad
+  }
+
+  /**
+    a naive implementation of numerical gradient of f at x
+    - f should be a function that takes a single argument
+    - x is the point (array) to evaluate the gradient at
+    */
+  def evalNumericalGradient(f: (Tensor) => Double,
+                            x: Tensor,
+                            h: Double = 0.00001): Tensor = {
+    val grad = ns.zeros(x.shape)
+    val it = ns.nditer(x)
+    while (it.hasNext) {
+      val ix = it.next
+
+      val oldVal = x(ix).squeeze()
+
+      x(ix) := oldVal + h
+      val pos = f(x)
+
+      x(ix) := oldVal - h
+      val neg = f(x)
+
+      x(ix) := oldVal
+
+      val g = (pos - neg) / (2.0 * h)
       grad(ix) := g
     }
     grad

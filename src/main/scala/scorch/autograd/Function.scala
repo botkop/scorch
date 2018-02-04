@@ -129,7 +129,7 @@ case class Pow(a: Variable, b: Variable) extends Function {
     b.backward(vgb)
   }
 }
-*/
+ */
 
 case class PowConstant(v: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(ns.power(v.data, d), Some(this))
@@ -277,3 +277,5 @@ case class SoftMax(actual: Variable, target: Variable) extends Function {
     actual.backward(Variable(dx))
   }
 }
+
+
