@@ -1,6 +1,6 @@
 Scorch
 ======
-Scorch is a minimalist neural net framework in Scala inspired by PyTorch.
+Scorch is a neural net framework in Scala inspired by PyTorch.
 
 
 ```scala
