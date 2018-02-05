@@ -32,6 +32,10 @@ abstract class Module(localParameters: Seq[Variable] = Nil)
   def subModules(): Seq[Module] = Seq.empty
   def parameters(): Seq[Variable] =
     localParameters ++ subModules().flatMap(_.parameters())
+
+  def zeroGrad(): Unit =
+    parameters().flatMap(_.grad).foreach(g => g.data := 0)
+
 }
 
 case class Relu() extends Module {

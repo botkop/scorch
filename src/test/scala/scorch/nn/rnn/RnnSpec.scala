@@ -7,6 +7,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
+import scorch.nn.Module
 
 import scala.language.postfixOps
 
@@ -176,8 +177,9 @@ class RnnSpec extends FlatSpec with Matchers {
     val dbError = relError(db, dbNum)
     println(dbError)
     assert(dbError < 1e-7)
+  }
 
-
+  it should "be possible to build a small network" in {
 
   }
 

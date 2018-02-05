@@ -174,6 +174,17 @@ case class Transpose(v: Variable) extends Function {
     v.backward(Variable(gradOutput.data.transpose))
 }
 
+// todo test this
+case class Reshape(v: Variable, shape: List[Int]) extends Function {
+  val oldShape: List[Int] = v.shape
+  override def forward(): Variable =
+    Variable(v.data.reshape(shape: _*), Some(this))
+  override def backward(gradOutput: Variable): Unit = {
+    val dv = gradOutput.data.reshape(oldShape: _*)
+    v.backward(Variable(dv))
+  }
+}
+
 //===============================================================
 
 case class Exp(v: Variable) extends Function {
@@ -277,5 +288,3 @@ case class SoftMax(actual: Variable, target: Variable) extends Function {
     actual.backward(Variable(dx))
   }
 }
-
-

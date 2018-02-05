@@ -12,6 +12,13 @@ case class WordEmbedding(w: Variable) extends Module(Seq(w)) {
     WordEmbeddingFunction(x, w).forward()
 }
 
+object WordEmbedding {
+  def apply(v: Int, d: Int): WordEmbedding = {
+    val w = ns.randn(v, d)
+    WordEmbedding(Variable(w))
+  }
+}
+
 case class WordEmbeddingFunction(x: Variable, w: Variable) extends Function {
 
   val List(n, t) = x.shape

@@ -1,11 +1,13 @@
 package scorch.nn.rnn
 
+import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
+import scorch.nn._
 
 import scala.language.postfixOps
 
@@ -52,6 +54,94 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
     oneOpGradientCheck(f, w)
   }
 
+  it should "build a simple language model" in {
+    // see http://pytorch.org/tutorials/beginner/nlp/word_embeddings_tutorial.html#word-embeddings-in-pytorch
+    val words = List("hello", "world")
+    val wordToIx = words.zipWithIndex.toMap
+    val embeds = WordEmbedding(2, 5)
+    val lookupTensor = Tensor(wordToIx("hello"))
+    val helloEmbed = embeds(Variable(lookupTensor))
+
+    println(helloEmbed.shape)
+
+  }
+
+  it should "build an n-gram language model" in {
+    val contextSize = 2
+    val embeddingDim = 10
+    val testSentence =
+      """When forty winters shall besiege thy brow,
+        |And dig deep trenches in thy beauty's field,
+        |Thy youth's proud livery so gazed on now,
+        |Will be a totter'd weed of small worth held:
+        |Then being asked, where all thy beauty lies,
+        |Where all the treasure of thy lusty days;
+        |To say, within thine own deep sunken eyes,
+        |Were an all-eating shame, and thriftless praise.
+        |How much more praise deserv'd thy beauty's use,
+        |If thou couldst answer 'This fair child of mine
+        |Shall sum my count, and make my old excuse,'
+        |Proving his beauty by succession thine!
+        |This were to be new made when thou art old,
+        |And see thy blood warm when thou feel'st it cold.
+      """.stripMargin
+
+    val tokens = testSentence
+      .replaceAll("[\\.',;:\\-]+", "")
+      .toLowerCase()
+      .split("\\s+")
+      .toList
+    val trigrams = tokens.sliding(3).toList
+    val vocab = tokens.distinct.sorted
+    val wordToIx = vocab.zipWithIndex.toMap
+
+    case class NGramLanguageModeler(vocabSize: Int,
+                                    embeddingDim: Int,
+                                    contextSize: Int)
+        extends Module {
+
+      val embeddings = WordEmbedding(vocabSize, embeddingDim)
+      val linear1 = Linear(contextSize * embeddingDim, 128)
+      val linear2 = Linear(128, vocabSize)
+
+      override def forward(x: Variable): Variable = {
+        val batchSize = x.shape.head
+        val embeds = embeddings(x)
+          .reshape(batchSize, contextSize * embeddingDim)
+        val out1 = relu(linear1(embeds))
+        val out2 = linear2(out1)
+        out2
+      }
+
+      override def subModules(): Seq[Module] = Seq(embeddings, linear1, linear2)
+    }
+
+    val model = NGramLanguageModeler(vocab.length, embeddingDim, contextSize)
+    val optimizer = SGD(model.parameters(), lr = 0.1)
+
+    for (epoch <- 1 to 10) {
+      var totalLoss = 0.0
+
+      for (tri <- trigrams) {
+        val contextIdxs = tri.init.map(wordToIx)
+        val contextVar = Variable(Tensor(contextIdxs.map(_.toDouble): _*))
+
+        model.zeroGrad()
+
+        val output = model(contextVar)
+        val target = Variable(Tensor(wordToIx(tri.last)))
+
+        val loss: Variable = softmax(output, target)
+        totalLoss += loss.data.squeeze()
+
+        loss.backward()
+        optimizer.step()
+      }
+
+      println(s"$epoch: $totalLoss")
+
+    }
+
+  }
+
 }
-
-
