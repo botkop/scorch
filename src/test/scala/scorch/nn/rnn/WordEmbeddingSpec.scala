@@ -93,7 +93,7 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
       .toList
     val trigrams = tokens.sliding(3).toList
     val vocab = tokens.distinct.sorted
-    val wordToIx = vocab.zipWithIndex.toMap
+    val wordToIx = vocab.zipWithIndex.toMap.mapValues(_.toDouble)
 
     case class NGramLanguageModeler(vocabSize: Int,
                                     embeddingDim: Int,
@@ -119,12 +119,15 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
     val model = NGramLanguageModeler(vocab.length, embeddingDim, contextSize)
     val optimizer = SGD(model.parameters(), lr = 0.1)
 
+    var totalLoss = 0.0
+
     for (epoch <- 1 to 10) {
-      var totalLoss = 0.0
+
+      totalLoss = 0
 
       for (tri <- trigrams) {
         val contextIdxs = tri.init.map(wordToIx)
-        val contextVar = Variable(Tensor(contextIdxs.map(_.toDouble): _*))
+        val contextVar = Variable(Tensor(contextIdxs: _*))
 
         model.zeroGrad()
 
@@ -139,9 +142,17 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
       }
 
       println(s"$epoch: $totalLoss")
-
     }
 
+    assert (totalLoss < 12)
+
+    val ctxi = Array("dig", "deep").map(wordToIx)
+    val ctxv = Variable(Tensor(ctxi))
+    val o = model(ctxv)
+    val w = vocab(ns.argmax(o.data).squeeze().toInt)
+    println(w)
+
+    assert(w == "trenches")
   }
 
 }

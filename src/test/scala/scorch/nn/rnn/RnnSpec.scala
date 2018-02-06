@@ -1,5 +1,7 @@
 package scorch.nn.rnn
 
+import java.io.File
+
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import org.nd4j.linalg.api.buffer.DataBuffer
@@ -7,9 +9,11 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
-import scorch.nn.Module
+import scorch.nn._
 
+import scala.io.Source
 import scala.language.postfixOps
+import scala.util.Random
 
 class RnnSpec extends FlatSpec with Matchers {
 
@@ -144,42 +148,168 @@ class RnnSpec extends FlatSpec with Matchers {
     out.backward(dOut)
 
     val dx = x.grad.get.data
-    def fx(t: Tensor): Tensor = RnnFunction(Variable(t), h0, wX, wH, b).forward().data
+    def fx(t: Tensor): Tensor =
+      RnnFunction(Variable(t), h0, wX, wH, b).forward().data
     val dxNum = evalNumericalGradientArray(fx, x.data, dOut.data)
     val dxError = relError(dx, dxNum)
     println(dxError)
     assert(dxError < 1e-7)
 
     val dh0 = h0.grad.get.data
-    def fh0(t: Tensor): Tensor = RnnFunction(x, Variable(t), wX, wH, b).forward().data
+    def fh0(t: Tensor): Tensor =
+      RnnFunction(x, Variable(t), wX, wH, b).forward().data
     val dh0Num = evalNumericalGradientArray(fh0, h0.data, dOut.data)
     val dh0Error = relError(dh0, dh0Num)
     println(dh0Error)
     assert(dh0Error < 1e-7)
 
     val dwX = wX.grad.get.data
-    def fwX(t: Tensor): Tensor = RnnFunction(x, h0, Variable(t), wH, b).forward().data
+    def fwX(t: Tensor): Tensor =
+      RnnFunction(x, h0, Variable(t), wH, b).forward().data
     val dwXNum = evalNumericalGradientArray(fwX, wX.data, dOut.data)
     val dwXError = relError(dwX, dwXNum)
     println(dwXError)
     assert(dwXError < 1e-7)
 
     val dwH = wH.grad.get.data
-    def fwH(t: Tensor): Tensor = RnnFunction(x, h0, wX, Variable(t), b).forward().data
+    def fwH(t: Tensor): Tensor =
+      RnnFunction(x, h0, wX, Variable(t), b).forward().data
     val dwHNum = evalNumericalGradientArray(fwH, wH.data, dOut.data)
     val dwHError = relError(dwH, dwHNum)
     println(dwHError)
     assert(dwHError < 1e-7)
 
     val db = b.grad.get.data
-    def fb(t: Tensor): Tensor = RnnFunction(x, h0, wX, wH, Variable(t)).forward().data
+    def fb(t: Tensor): Tensor =
+      RnnFunction(x, h0, wX, wH, Variable(t)).forward().data
     val dbNum = evalNumericalGradientArray(fb, b.data, dOut.data)
     val dbError = relError(db, dbNum)
     println(dbError)
     assert(dbError < 1e-7)
   }
 
-  it should "be possible to build a small network" in {
+  "A Char-RNN" should "classify names" in {
+    // see http://pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial.html
+
+    def getListOfFiles(dir: String): List[File] = {
+      val d = new File(dir)
+      if (d.exists && d.isDirectory) {
+        d.listFiles.filter(_.isFile).toList
+      } else {
+        List[File]()
+      }
+    }
+
+    def readNames(): Map[String, List[String]] = {
+      val files = getListOfFiles("src/test/resources/names")
+
+      files map { f =>
+        val lang = f.getName.replaceFirst("\\.txt$", "")
+        val names = Source.fromFile(f).getLines().toList
+        lang -> names
+      } toMap
+    }
+
+    def letterToTensor(letter: Char, letters: Map[Char, Int]): Tensor = {
+      val t = ns.zeros(1, letters.size)
+      t(0, letters(letter)) := 1
+      t
+    }
+
+    def lineToTensor(line: String, letters: Map[Char, Int]): Tensor = {
+      val t = ns.zeros(line.length, 1, letters.size)
+      line.toCharArray.zipWithIndex.foreach {
+        case (c, i) =>
+          t(i, 0, letters(c)) := 1
+      }
+      t
+    }
+
+    def randomTrainingPair(
+        categories: List[String],
+        names: Map[String, List[String]],
+        letters: Map[Char, Int]): (Int, Int, Tensor, Tensor) = {
+
+      val categoryIndex = Random.nextInt(categories.size)
+      val category = categories(categoryIndex)
+
+      val lineIndex = Random.nextInt(names(category).length)
+
+      val categoryTensor = Tensor(categoryIndex)
+      val lineTensor = lineToTensor(names(category)(lineIndex), letters)
+      (categoryIndex, lineIndex, categoryTensor, lineTensor)
+    }
+
+    case class CharRnn(inputSize: Int, hiddenSize: Int, outputSize: Int) {
+      val i2h = Linear(inputSize + hiddenSize, hiddenSize)
+      val i2o = Linear(inputSize + hiddenSize, outputSize)
+
+      def forward(input: Variable, hidden: Variable): (Variable, Variable) = {
+        val combined =
+          Variable(ns.concatenate(Seq(input.data, hidden.data), axis = 1))
+        val newHidden = i2h(combined)
+        val output = i2o(combined)
+        (output, newHidden)
+      }
+
+      def initHidden = Variable(ns.zeros(1, hiddenSize))
+
+      def apply(input: Variable, hidden: Variable): (Variable, Variable) =
+        forward(input, hidden)
+
+      def parameters(): Seq[Variable] = i2o.parameters()
+    }
+
+    def train(rnn: CharRnn,
+              optimizer: Optimizer,
+              categoryTensor: Tensor,
+              lineTensor: Tensor): (Variable, Double) = {
+
+      val h0 = rnn.initHidden
+      val o0 = Variable(Tensor(0))
+
+      optimizer.zeroGrad()
+
+      println(lineTensor.shape.toList)
+
+      val (output, _) = (0 until lineTensor.shape.head).foldLeft(o0, h0) {
+        case ((_, h), i) =>
+          val lv = Variable(lineTensor(i))
+          rnn(lv, h)
+      }
+
+      val loss = softmax(output, Variable(categoryTensor))
+      loss.backward()
+      optimizer.step()
+      (output, loss.data.squeeze())
+    }
+
+    val names: Map[String, List[String]] = readNames()
+    val categories = names.keys.toList.sorted
+    val nCategories = categories.size
+    val letters: List[Char] =
+      names.values.flatten.flatMap(_.toCharArray).toList.distinct.sorted
+    val nLetters = letters.length
+    val letterToIndex: Map[Char, Int] = letters.zipWithIndex.toMap
+
+    val nHidden = 128
+    val rnn = CharRnn(nLetters, nHidden, nCategories)
+    val optimizer = SGD(rnn.parameters(), lr = 5e-3)
+
+    val numEpochs = 100000
+    var currentLoss = 0.0
+
+    for (epoch <- 1 to numEpochs) {
+      val (category, line, categoryTensor, lineTensor) =
+        randomTrainingPair(categories, names, letterToIndex)
+      val (output, loss) = train(rnn, optimizer, categoryTensor, lineTensor)
+      currentLoss += loss
+
+      if (epoch % 1000 == 0) {
+        println(currentLoss / 1000)
+        currentLoss = 0
+      }
+    }
 
   }
 
