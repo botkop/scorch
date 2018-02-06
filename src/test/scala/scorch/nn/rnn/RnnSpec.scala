@@ -228,16 +228,17 @@ class RnnSpec extends FlatSpec with Matchers {
     def randomTrainingPair(
         categories: List[String],
         names: Map[String, List[String]],
-        letters: Map[Char, Int]): (Int, Int, Tensor, Tensor) = {
+        letters: Map[Char, Int]): (String, String, Tensor, Tensor) = {
 
       val categoryIndex = Random.nextInt(categories.size)
       val category = categories(categoryIndex)
 
       val lineIndex = Random.nextInt(names(category).length)
+      val line = names(category)(lineIndex)
 
       val categoryTensor = Tensor(categoryIndex)
       val lineTensor = lineToTensor(names(category)(lineIndex), letters)
-      (categoryIndex, lineIndex, categoryTensor, lineTensor)
+      (category, line, categoryTensor, lineTensor)
     }
 
     case class CharRnn(inputSize: Int, hiddenSize: Int, outputSize: Int) {
@@ -257,7 +258,7 @@ class RnnSpec extends FlatSpec with Matchers {
       def apply(input: Variable, hidden: Variable): (Variable, Variable) =
         forward(input, hidden)
 
-      def parameters(): Seq[Variable] = i2o.parameters()
+      def parameters(): Seq[Variable] = i2o.parameters() //++ i2h.parameters()
     }
 
     def train(rnn: CharRnn,
@@ -270,8 +271,6 @@ class RnnSpec extends FlatSpec with Matchers {
 
       optimizer.zeroGrad()
 
-      println(lineTensor.shape.toList)
-
       val (output, _) = (0 until lineTensor.shape.head).foldLeft(o0, h0) {
         case ((_, h), i) =>
           val lv = Variable(lineTensor(i))
@@ -280,6 +279,7 @@ class RnnSpec extends FlatSpec with Matchers {
 
       val loss = softmax(output, Variable(categoryTensor))
       loss.backward()
+
       optimizer.step()
       (output, loss.data.squeeze())
     }
@@ -294,7 +294,7 @@ class RnnSpec extends FlatSpec with Matchers {
 
     val nHidden = 128
     val rnn = CharRnn(nLetters, nHidden, nCategories)
-    val optimizer = SGD(rnn.parameters(), lr = 5e-3)
+    val optimizer = SGD(rnn.parameters(), lr = 1e-3)
 
     val numEpochs = 100000
     var currentLoss = 0.0
@@ -305,8 +305,10 @@ class RnnSpec extends FlatSpec with Matchers {
       val (output, loss) = train(rnn, optimizer, categoryTensor, lineTensor)
       currentLoss += loss
 
-      if (epoch % 1000 == 0) {
-        println(currentLoss / 1000)
+      if (epoch % 5000 == 0) {
+        val guess = categories(ns.argmax(output.data).squeeze.toInt)
+        println(s"epoch: $epoch $line: category: $category guessed: $guess")
+        println(currentLoss / 5000)
         currentLoss = 0
       }
     }
