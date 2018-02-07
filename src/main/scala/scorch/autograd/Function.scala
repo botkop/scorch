@@ -185,6 +185,40 @@ case class Reshape(v: Variable, shape: List[Int]) extends Function {
   }
 }
 
+case class Concat(v1: Variable, v2: Variable, axis: Int = 0) extends Function {
+  override def forward(): Variable =
+    Variable(ns.concatenate(Seq(v1.data, v2.data), axis), Some(this))
+
+  import ns._
+
+  override def backward(gradOutput: Variable): Unit = {
+    if (axis == 0) {
+      val dv1 = gradOutput.data(0 :> v1.shape.head)
+      val dv2 = gradOutput.data(v1.shape.head - 1, -1)
+      v1.backward(Variable(dv1))
+      v2.backward(Variable(dv2))
+    } else {
+
+
+//      val dv1 = gradOutput.data(:>, 0 :> v1.shape(axis))
+//      val dv2 = gradOutput.data(:>, v1.shape(axis) - 1 :> -1)
+
+      val dv1 = gradOutput.data.T(0 :> v1.shape(axis)).T
+      val dv2 = gradOutput.data.T(v1.shape(axis) - 1 :> -1).T
+
+//      println(gradOutput.shape)
+//      println(v1.shape)
+//      println(dv1.shape.toList)
+//      println(v2.shape)
+//      println(dv2.shape.toList)
+//      println
+
+      v1.backward(Variable(dv1))
+      v2.backward(Variable(dv2))
+    }
+  }
+}
+
 //===============================================================
 
 case class Exp(v: Variable) extends Function {

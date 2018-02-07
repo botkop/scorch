@@ -13,8 +13,8 @@ case class Rnn(h0: Variable, wX: Variable, wH: Variable, b: Variable)
 }
 
 object Rnn {
-  def apply(h0: Variable, d: Int): Rnn = {
-    val List(_, h) = h0.shape
+  def apply(n: Int, h: Int, d: Int): Rnn = {
+    val h0 = Variable(ns.zeros(n, h))
     val wX = Variable(ns.randn(d, h) / math.sqrt(d))
     val wH = Variable(ns.randn(h, h) / math.sqrt(h))
     val b = Variable(ns.zeros(h))
