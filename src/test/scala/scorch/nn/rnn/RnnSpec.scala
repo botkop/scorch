@@ -248,7 +248,7 @@ class RnnSpec extends FlatSpec with Matchers {
       def forward(input: Variable, hidden: Variable): (Variable, Variable) = {
         val combined =
           Variable(ns.concatenate(Seq(input.data, hidden.data), axis = 1))
-        val newHidden = i2h(combined)
+        val newHidden = tanh(i2h(combined))
         val output = i2o(combined)
         (output, newHidden)
       }
@@ -294,7 +294,8 @@ class RnnSpec extends FlatSpec with Matchers {
 
     val nHidden = 128
     val rnn = CharRnn(nLetters, nHidden, nCategories)
-    val optimizer = SGD(rnn.parameters(), lr = 1e-3)
+    val optimizer = SGD(rnn.parameters(), lr = 1e-2)
+    val printEvery = 1000
 
     val numEpochs = 100000
     var currentLoss = 0.0
@@ -305,10 +306,10 @@ class RnnSpec extends FlatSpec with Matchers {
       val (output, loss) = train(rnn, optimizer, categoryTensor, lineTensor)
       currentLoss += loss
 
-      if (epoch % 5000 == 0) {
+      if (epoch % printEvery == 0) {
         val guess = categories(ns.argmax(output.data).squeeze.toInt)
         println(s"epoch: $epoch $line: category: $category guessed: $guess")
-        println(currentLoss / 5000)
+        println(currentLoss / printEvery)
         currentLoss = 0
       }
     }
