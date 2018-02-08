@@ -138,4 +138,18 @@ class FunctionGradientSpec
     oneOpGradientCheck(f, a)
   }
 
+  "Concat" should "calculate gradients" in {
+    val a = Variable(ns.randn(3, 4))
+    val b = Variable(ns.randn(4, 4))
+    def f(a: Variable, b: Variable): Variable = Concat(a, b).forward()
+    binOpGradientCheck(f, a, b)
+  }
+
+  it should "calculate gradients along dimension 1" in {
+    val a = Variable(ns.randn(3, 4))
+    val b = Variable(ns.randn(3, 5))
+    def f(a: Variable, b: Variable): Variable = Concat(a, b, axis = 1).forward()
+    binOpGradientCheck(f, a, b)
+  }
+
 }

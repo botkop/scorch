@@ -83,7 +83,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
         val combined =
           Concat(input, hidden, axis = 1).forward()
           // Variable(ns.concatenate(Seq(input.data, hidden.data), axis = 1))
-        val newHidden = i2h(combined)
+        val newHidden = tanh(i2h(combined))
         val output = i2o(combined)
         (output, newHidden)
       }
@@ -93,7 +93,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
       def apply(input: Variable, hidden: Variable): (Variable, Variable) =
         forward(input, hidden)
 
-      def parameters(): Seq[Variable] = i2o.parameters() ++ i2h.parameters()
+       def parameters(): Seq[Variable] = i2o.parameters()  ++ i2h.parameters()
     }
 
     def train(rnn: CharRnn,
@@ -145,8 +145,10 @@ class CharRnnSpec extends FlatSpec with Matchers {
           lines.map(line => (category, line))
       }
 
-      val sample = Random.shuffle(categories).take(100)
-      println(sample)
+      val n = 1000
+
+      val sample = Random.shuffle(categories).take(n)
+      // println(sample)
 
       val correct = sample.foldLeft(0) {
         case (acc, (category, line)) =>
@@ -158,7 +160,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
           }
       }
 
-      correct.toDouble / 100
+      correct.toDouble / n
     }
 
     val names: Map[String, List[String]] = readNames()
@@ -171,8 +173,8 @@ class CharRnnSpec extends FlatSpec with Matchers {
 
     val nHidden = 128
     val rnn = CharRnn(nLetters, nHidden, nCategories)
-    val optimizer = SGD(rnn.parameters(), lr = 1e-2)
-    val printEvery = 5000
+    val optimizer = SGD(rnn.parameters(), lr = 5e-3)
+    val printEvery = 1000
 
     val numEpochs = 100000
     var currentLoss = 0.0
@@ -186,9 +188,10 @@ class CharRnnSpec extends FlatSpec with Matchers {
       if (epoch % printEvery == 0) {
         val guess = categories(ns.argmax(output.data).squeeze.toInt)
         println(s"epoch: $epoch $line: category: $category guessed: $guess")
-        println(currentLoss / printEvery)
+        println("loss: " + currentLoss / printEvery)
         currentLoss = 0
-        println(accuracy(rnn, names, letterToIndex))
+        println("accuracy: " + accuracy(rnn, names, letterToIndex))
+        println
       }
     }
 
