@@ -190,7 +190,7 @@ case class Reshape(v: Variable, shape: List[Int]) extends Function {
 case class Concat(v1: Variable, v2: Variable, axis: Int = 0) extends Function {
 
   override def forward(): Variable = {
-     Variable(ns.concatenate(Seq(v1.data, v2.data), axis), Some(this))
+    Variable(ns.concatenate(Seq(v1.data, v2.data), axis), Some(this))
   }
 
   import ns._
@@ -201,13 +201,13 @@ case class Concat(v1: Variable, v2: Variable, axis: Int = 0) extends Function {
       val d = gradOutput.data.data
 
       val (d1, d2) = d.splitAt(v1.shape.product)
-      val dv1 = Tensor(d1).reshape(v1.shape:_*)
-      val dv2 = Tensor(d2).reshape(v2.shape:_*)
+      val dv1 = Tensor(d1).reshape(v1.shape: _*)
+      val dv2 = Tensor(d2).reshape(v2.shape: _*)
 
       /*
       val dv1 = gradOutput.data(0 :> v1.shape(axis))
       val dv2 = gradOutput.data(v1.shape(axis) :>)
-      */
+       */
 
       v1.backward(Variable(dv1))
       v2.backward(Variable(dv2))
@@ -245,10 +245,29 @@ case class Tanh(v: Variable) extends Function {
 }
 
 case class Sigmoid(v: Variable) extends Function {
-  val cache: Tensor = ns.sigmoid(v.data)
-  override def forward(): Variable = Variable(cache, Some(this))
+  val sigmoid: Tensor = ns.sigmoid(v.data)
+  override def forward(): Variable = Variable(sigmoid, Some(this))
   override def backward(gradOutput: Variable): Unit =
-    v.backward(Variable(gradOutput.data * cache * (1 - cache)))
+    v.backward(Variable(gradOutput.data * sigmoid * (1 - sigmoid)))
+}
+
+case class SoftmaxFunction(v: Variable) extends Function {
+  val max: Double = ns.max(v.data).squeeze()
+  val ex: Tensor = ns.exp(v.data - max)
+  val sum: Tensor = ns.sum(ex, axis = 0)
+  val softmax: Tensor = ex / sum
+
+  override def forward(): Variable = Variable(softmax, Some(this))
+
+  override def backward(gradOutput: Variable): Unit = {
+    val y = softmax
+    val dy = gradOutput.data
+
+    val dx = y * dy
+    val s = ns.sum(dx, axis = 0)
+    dx -= y * s
+    v.backward(Variable(dx))
+  }
 }
 
 case class Mean(v: Variable) extends Function {
@@ -307,7 +326,7 @@ case class DropoutFunction(x: Variable,
 
 //============================================
 // Loss functions
-case class SoftMax(actual: Variable, target: Variable) extends Function {
+case class SoftmaxLoss(actual: Variable, target: Variable) extends Function {
   val x: Tensor = actual.data
   val y: Tensor = target.data.T
 

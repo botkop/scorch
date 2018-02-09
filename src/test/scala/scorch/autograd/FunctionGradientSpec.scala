@@ -107,6 +107,12 @@ class FunctionGradientSpec
     oneOpGradientCheck(f, a)
   }
 
+  "Softmax" should "calculate gradients" in {
+    val a = Variable(ns.randn(4, 6))
+    def f(a: Variable): Variable = SoftmaxFunction(a).forward()
+    oneOpGradientCheck(f, a)
+  }
+
   "Mean" should "calculate gradients" in {
     val a = Variable(ns.randn(4, 6))
     def f(a: Variable): Variable = Mean(a).forward()
