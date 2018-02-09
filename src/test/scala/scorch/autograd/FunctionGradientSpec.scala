@@ -109,7 +109,7 @@ class FunctionGradientSpec
 
   "Softmax" should "calculate gradients" in {
     val a = Variable(ns.randn(4, 6))
-    def f(a: Variable): Variable = SoftmaxFunction(a).forward()
+    def f(a: Variable): Variable = Softmax(a).forward()
     oneOpGradientCheck(f, a)
   }
 

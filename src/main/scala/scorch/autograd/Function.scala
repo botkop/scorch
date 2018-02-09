@@ -251,7 +251,7 @@ case class Sigmoid(v: Variable) extends Function {
     v.backward(Variable(gradOutput.data * sigmoid * (1 - sigmoid)))
 }
 
-case class SoftmaxFunction(v: Variable) extends Function {
+case class Softmax(v: Variable) extends Function {
   val max: Double = ns.max(v.data).squeeze()
   val ex: Tensor = ns.exp(v.data - max)
   val sum: Tensor = ns.sum(ex, axis = 0)
@@ -260,6 +260,7 @@ case class SoftmaxFunction(v: Variable) extends Function {
   override def forward(): Variable = Variable(softmax, Some(this))
 
   override def backward(gradOutput: Variable): Unit = {
+    // from https://stackoverflow.com/questions/33541930/how-to-implement-the-softmax-derivative-independently-from-any-loss-function
     val y = softmax
     val dy = gradOutput.data
 

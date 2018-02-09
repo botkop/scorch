@@ -60,9 +60,9 @@ class CharRnnSpec extends FlatSpec with Matchers {
     }
 
     def randomTrainingPair(
-                            categories: List[String],
-                            names: Map[String, List[String]],
-                            letters: Map[Char, Int]): (String, String, Tensor, Tensor) = {
+        categories: List[String],
+        names: Map[String, List[String]],
+        letters: Map[Char, Int]): (String, String, Tensor, Tensor) = {
 
       val categoryIndex = Random.nextInt(categories.size)
       val category = categories(categoryIndex)
@@ -82,7 +82,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
       def forward(input: Variable, hidden: Variable): (Variable, Variable) = {
         val combined =
           Concat(input, hidden, axis = 1).forward()
-          // Variable(ns.concatenate(Seq(input.data, hidden.data), axis = 1))
+        // Variable(ns.concatenate(Seq(input.data, hidden.data), axis = 1))
         val newHidden = tanh(i2h(combined))
         val output = i2o(combined)
         (output, newHidden)
@@ -93,7 +93,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
       def apply(input: Variable, hidden: Variable): (Variable, Variable) =
         forward(input, hidden)
 
-       def parameters(): Seq[Variable] = i2o.parameters()  ++ i2h.parameters()
+      def parameters(): Seq[Variable] = i2o.parameters() ++ i2h.parameters()
     }
 
     def train(rnn: CharRnn,
@@ -112,7 +112,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
           rnn(lv, h)
       }
 
-      val loss = softmax(output, Variable(categoryTensor))
+      val loss = SoftmaxLoss(output, Variable(categoryTensor)).forward()
       loss.backward()
 
       optimizer.step()

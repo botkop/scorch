@@ -38,7 +38,7 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
 
-    val loss = nn.softmax(out, target)
+    val loss = nn.softmaxLoss(out, target)
 
     loss.backward()
 
@@ -81,7 +81,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmax(output, target)
+      val loss = nn.softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -94,7 +94,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     val output = n(input)
-    val loss = nn.softmax(output, target)
+    val loss = nn.softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 
@@ -131,7 +131,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmax(output, target)
+      val loss = nn.softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -144,7 +144,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     val output = n(input)
-    val loss = nn.softmax(output, target)
+    val loss = nn.softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 
@@ -181,7 +181,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmax(output, target)
+      val loss = nn.softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -194,7 +194,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     val output = n(input)
-    val loss = nn.softmax(output, target)
+    val loss = nn.softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 
@@ -235,7 +235,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmax(output, target)
+      val loss = nn.softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -249,7 +249,7 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     n.eval()
     val output = n(input)
-    val loss = nn.softmax(output, target)
+    val loss = nn.softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 

@@ -134,7 +134,7 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
         val output = model(contextVar)
         val target = Variable(Tensor(wordToIx(tri.last)))
 
-        val loss: Variable = softmax(output, target)
+        val loss: Variable = softmaxLoss(output, target)
         totalLoss += loss.data.squeeze()
 
         loss.backward()
@@ -144,7 +144,7 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
       println(s"$epoch: $totalLoss")
     }
 
-    assert (totalLoss < 12)
+    assert (totalLoss < 20)
 
     val ctxi = Array("dig", "deep").map(wordToIx)
     val ctxv = Variable(Tensor(ctxi))
