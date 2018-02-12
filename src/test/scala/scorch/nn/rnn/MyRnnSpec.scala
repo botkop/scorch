@@ -11,6 +11,7 @@ import scorch.nn.Module
 import scorch.autograd._
 import scorch.nn._
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
@@ -139,8 +140,6 @@ class MyRnnSpec extends FlatSpec with Matchers {
       while (idx != newlineCharacter && counter < 50) {
         val Seq(y, a) = rnn(x, aPrev)
 
-        ns.rand.setSeed(counter)
-
         idx = ns.choice(ns.arange(vocabSize), y.data).squeeze().toInt
         indices.append(idx)
 
@@ -155,6 +154,67 @@ class MyRnnSpec extends FlatSpec with Matchers {
         indices.append(newlineCharacter)
       }
       indices
+    }
+
+    def rnnForward(xs: List[Int],
+                   ys: List[Int],
+                   a0: Variable,
+                   rnn: MyRnnCell,
+                   vocabSize: Int = 27): (Double,
+                                          mutable.Map[Int, Variable],
+                                          mutable.Map[Int, Variable],
+                                          mutable.Map[Int, Variable]) = {
+      val x = scala.collection.mutable.Map.empty[Int, Variable]
+      val a = scala.collection.mutable.Map.empty[Int, Variable]
+      val yHat = scala.collection.mutable.Map.empty[Int, Variable]
+
+      a(-1) = a0
+
+      var loss = 0.0
+
+      for (t <- xs.indices) {
+        x(t) = Variable(ns.zeros(vocabSize, 1))
+        if (xs(t) != '^')
+          x(t).data(xs(t)) := 1
+
+        val Seq(at, yht) = rnn(x(t), a(t - 1))
+        a(t) = at
+        yHat(t) = yht
+
+        loss -= ns.log(yHat(t).data(ys(t), 0)).squeeze()
+      }
+      (loss, yHat, a, x)
+    }
+
+    def rnnBackward(xs: List[Int],
+                    ys: List[Int],
+                    rnn: MyRnnCell,
+                    yHat: mutable.Map[Int, Variable],
+                    a: mutable.Map[Int, Variable],
+                    x: mutable.Map[Int, Variable]): Unit = {
+      for (t <- xs.indices.reverse) {
+        val dy = ns.copy(yHat(t).data)
+        dy(ys(t)) -= 1
+        yHat(t).backward(Variable(dy))
+      }
+    }
+
+    def updateParameters(rnn: MyRnnCell, lr: Double): Unit = {
+      rnn.parameters.foreach { p =>
+        p.data -= lr * p.grad.get.data
+      }
+    }
+
+    def optimize(xs: List[Int],
+                 ys: List[Int],
+                 aPrev: Variable,
+                 rnn: MyRnnCell,
+                 lr: Double = 0.01): (Double, Variable) = {
+      val (loss, yHat, a, x) = rnnForward(xs, ys, aPrev, rnn)
+      rnnBackward(xs, ys, rnn, yHat, a, x)
+      clip(rnn.parameters, 5)
+      updateParameters(rnn, lr)
+      (loss, a(a.keys.max))
     }
 
     val na = 100
