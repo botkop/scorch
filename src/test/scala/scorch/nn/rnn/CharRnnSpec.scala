@@ -23,7 +23,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
   // this is really slow, and does not seem to work
   // so the test is tagged as ignored
 
-  "A Char-RNN" should "classify names" ignore {
+  "A Char-RNN" should "classify names" in {
 
     def getListOfFiles(dir: String): List[File] = {
       val d = new File(dir)
@@ -83,8 +83,8 @@ class CharRnnSpec extends FlatSpec with Matchers {
         val combined =
           Concat(input, hidden, axis = 1).forward()
         // Variable(ns.concatenate(Seq(input.data, hidden.data), axis = 1))
-        val newHidden = tanh(i2h(combined))
-        val output = i2o(combined)
+        val newHidden = i2h(combined)
+        val output = softmax(i2o(combined))
         (output, newHidden)
       }
 
