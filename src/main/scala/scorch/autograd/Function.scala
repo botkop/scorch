@@ -245,27 +245,22 @@ case class Tanh(v: Variable) extends Function {
 }
 
 case class Sigmoid(v: Variable) extends Function {
-  val sigmoid: Tensor = ns.sigmoid(v.data)
+  lazy val sigmoid: Tensor = ns.sigmoid(v.data)
   override def forward(): Variable = Variable(sigmoid, Some(this))
   override def backward(gradOutput: Variable): Unit =
     v.backward(Variable(gradOutput.data * sigmoid * (1 - sigmoid)))
 }
 
 case class Softmax(v: Variable) extends Function {
-  val max: Double = ns.max(v.data).squeeze()
-  val ex: Tensor = ns.exp(v.data - max)
-  val sum: Tensor = ns.sum(ex, axis = 0)
-  val softmax: Tensor = ex / sum
-
+  lazy val softmax: Tensor = ns.softmax(v.data)
   override def forward(): Variable = Variable(softmax, Some(this))
-
   override def backward(gradOutput: Variable): Unit = {
     // from https://stackoverflow.com/questions/33541930/how-to-implement-the-softmax-derivative-independently-from-any-loss-function
     val y = softmax
     val dy = gradOutput.data
 
     val dx = y * dy
-    val s = ns.sum(dx, axis = 0)
+    val s = ns.sum(dx, axis = dx.shape.length - 1)
     dx -= y * s
     v.backward(Variable(dx))
   }
