@@ -1,19 +1,16 @@
 package scorch.nn.rnn
 
-import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
-import scorch.autograd.Variable
+import scorch.autograd.{Variable, _}
 import scorch.nn.Module
-import scorch.autograd._
-import scorch.nn._
 
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
+import scala.annotation.tailrec
 import scala.io.Source
+import scala.util.Random
 
 class MyRnnSpec extends FlatSpec with Matchers {
 
@@ -69,6 +66,12 @@ class MyRnnSpec extends FlatSpec with Matchers {
         val yt = softmax(wya.dot(aNext) + by)
         Seq(yt, aNext)
     }
+
+    def clipGradients(maxValue: Double): Unit = {
+      parameters
+        .map(_.grad.get)
+        .foreach(v => v.data := ns.clip(v.data, -maxValue, maxValue))
+    }
   }
 
   object MyRnnCell {
@@ -109,6 +112,13 @@ class MyRnnSpec extends FlatSpec with Matchers {
       .mkString
       .toLowerCase
 
+    val examples = Random.shuffle(
+      Source
+        .fromFile("src/test/resources/dinos.txt")
+        .getLines()
+        .map(_.toLowerCase)
+        .toList)
+
     val chars = data.toCharArray.distinct.sorted
 
     val dataSize = data.length
@@ -120,111 +130,127 @@ class MyRnnSpec extends FlatSpec with Matchers {
     val charToIx = chars.zipWithIndex.toMap
     val ixToChar = charToIx.map(_.swap)
 
-    def clip(gradients: Seq[Variable], maxValue: Double): Unit = {
-      gradients.foreach(v => v.data := ns.clip(v.data, -maxValue, maxValue))
-    }
+    val EolIndex = charToIx('\n')
+    val BolIndex = -1
 
-    def sample(rnn: MyRnnCell, charToIx: Map[Char, Int]): ListBuffer[Int] = {
+    def sample(rnn: MyRnnCell, charToIx: Map[Char, Int]): List[Int] = {
+      @tailrec
+      def generate(counter: Int,
+                   prevX: Variable,
+                   prevA: Variable,
+                   acc: List[Int]): List[Int] = {
+        if (acc.lastOption.contains(EolIndex)) {
+          acc
+        } else if (counter >= 50) {
+          acc :+ EolIndex
+        } else {
+          val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
+          generate(counter + 1, nextX, nextA, acc :+ nextIdx)
+        }
+      }
+
+      def generateNextChar(xPrev: Variable,
+                           aPrev: Variable): (Variable, Int, Variable) = {
+        val vocabSize = xPrev.shape.head
+        val Seq(yHat, aNext) = rnn(xPrev, aPrev)
+        val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
+        val xNext = Variable(ns.zerosLike(xPrev.data))
+        xNext.data(nextIdx, 0) := 1
+        (xNext, nextIdx, aNext)
+      }
+
       val vocabSize = charToIx.size
       val na = rnn.na
 
-      val x = Variable(ns.zeros(vocabSize, 1))
-      var aPrev = Variable(ns.zeros(na, 1))
+      val x0 = Variable(ns.zeros(vocabSize, 1))
+      val a0 = Variable(ns.zeros(na, 1))
 
-      val indices = ListBuffer.empty[Int]
-      var idx = -1
-
-      var counter = 0
-      val newlineCharacter = charToIx('\n')
-
-      while (idx != newlineCharacter && counter < 50) {
-        val Seq(y, a) = rnn(x, aPrev)
-
-        idx = ns.choice(ns.arange(vocabSize), y.data).squeeze().toInt
-        indices.append(idx)
-
-        x.data := ns.zeros(vocabSize, 1)
-        x.data(idx, 0) := 1
-
-        aPrev = a
-        counter += 1
-      }
-
-      if (counter == 50) {
-        indices.append(newlineCharacter)
-      }
-      indices
+      generate(1, x0, a0, List.empty[Int])
     }
 
     def rnnForward(xs: List[Int],
                    ys: List[Int],
-                   a0: Variable,
+                   aPrev: Variable,
                    rnn: MyRnnCell,
-                   vocabSize: Int = 27): (Double,
-                                          mutable.Map[Int, Variable],
-                                          mutable.Map[Int, Variable],
-                                          mutable.Map[Int, Variable]) = {
-      val x = scala.collection.mutable.Map.empty[Int, Variable]
-      val a = scala.collection.mutable.Map.empty[Int, Variable]
-      val yHat = scala.collection.mutable.Map.empty[Int, Variable]
-
-      a(-1) = a0
-
-      var loss = 0.0
-
-      for (t <- xs.indices) {
-        x(t) = Variable(ns.zeros(vocabSize, 1))
-        if (xs(t) != '^')
-          x(t).data(xs(t)) := 1
-
-        val Seq(at, yht) = rnn(x(t), a(t - 1))
-        a(t) = at
-        yHat(t) = yht
-
-        loss -= ns.log(yHat(t).data(ys(t), 0)).squeeze()
+                   vocabSize: Int = 27): (Double, List[Variable], Variable) =
+      xs.zip(ys).foldLeft(0.0, List.empty[Variable], aPrev) {
+        case ((loss, yHat, a0), (x, y)) =>
+          val xt = Variable(ns.zeros(vocabSize, 1))
+          if (x != BolIndex)
+            xt.data(x, 0) := 1
+          val Seq(yht, a1) = rnn(xt, a0)
+          val nextLoss = loss - ns.log(yht.data(y, 0)).squeeze()
+          (nextLoss, yHat :+ yht, a1)
       }
-      (loss, yHat, a, x)
-    }
 
-    def rnnBackward(xs: List[Int],
-                    ys: List[Int],
+    def rnnBackward(ys: List[Int],
                     rnn: MyRnnCell,
-                    yHat: mutable.Map[Int, Variable],
-                    a: mutable.Map[Int, Variable],
-                    x: mutable.Map[Int, Variable]): Unit = {
-      for (t <- xs.indices.reverse) {
-        val dy = ns.copy(yHat(t).data)
-        dy(ys(t)) -= 1
-        yHat(t).backward(Variable(dy))
+                    yHat: List[Variable]): Unit = {
+      rnn.zeroGrad()
+      yHat.zip(ys).reverse.foreach {
+        case (yh, y) =>
+          val dy = ns.copy(yh.data)
+          dy(y, 0) -= 1
+          yh.backward(Variable(dy))
       }
     }
 
-    def updateParameters(rnn: MyRnnCell, lr: Double): Unit = {
+    def updateParameters(rnn: MyRnnCell, lr: Double): Unit =
       rnn.parameters.foreach { p =>
         p.data -= lr * p.grad.get.data
       }
-    }
 
     def optimize(xs: List[Int],
                  ys: List[Int],
                  aPrev: Variable,
                  rnn: MyRnnCell,
                  lr: Double = 0.01): (Double, Variable) = {
-      val (loss, yHat, a, x) = rnnForward(xs, ys, aPrev, rnn)
-      rnnBackward(xs, ys, rnn, yHat, a, x)
-      clip(rnn.parameters, 5)
+      val (loss, yHat, a) = rnnForward(xs, ys, aPrev, rnn)
+      rnnBackward(ys, rnn, yHat)
+      rnn.clipGradients(5)
       updateParameters(rnn, lr)
-      (loss, a(a.keys.max))
+      (loss, a)
     }
 
-    val na = 100
-    val nx = vocabSize
-    val ny = vocabSize
-    val rnn = MyRnnCell(na, nx, ny)
+    def model(examples: List[String],
+              ixToChar: Map[Int, Char],
+              charToIx: Map[Char, Int],
+              numIterations: Int = 35000,
+              na: Int = 50,
+              numNames: Int = 7,
+              vocabSize: Int = 27): Unit = {
+      val (nx, ny) = (vocabSize, vocabSize)
+      val rnn = MyRnnCell(na, nx, ny)
 
-    val indices = sample(rnn, charToIx)
-    println(indices.map(ixToChar).mkString)
+      var aPrev = Variable(ns.zeros(na, 1))
 
+      var totalLoss = 0.0
+
+      for (j <- 1 to numIterations) {
+        val index = j % examples.length
+        val xs: List[Int] = BolIndex +: examples(index).map(charToIx).toList
+        val ys: List[Int] = xs.tail :+ EolIndex
+
+        val (loss, ap) = optimize(xs, ys, aPrev, rnn)
+        totalLoss += loss
+        // aPrev = Variable(ap.data)
+        // aPrev = ap
+        // aPrev.data := ap.data
+
+        val printEvery = 1000
+
+        if (j % printEvery == 0) {
+          println(s"Iteration: $j, Loss: ${totalLoss / printEvery}")
+          for (_ <- 1 to numNames) {
+            val sampledIndices = sample(rnn, charToIx)
+            print(sampledIndices.map(ixToChar).mkString)
+            totalLoss = 0.0
+          }
+          println()
+        }
+      }
+    }
+    model(examples, ixToChar, charToIx)
   }
 
 }
