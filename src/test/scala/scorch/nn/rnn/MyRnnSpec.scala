@@ -21,7 +21,6 @@ class MyRnnSpec extends FlatSpec with Matchers {
                        by: Variable)
       extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
 
-
     val List(na, nx) = wax.shape
     val List(ny, _) = wya.shape
     val optimizer = SGD(parameters, lr = 0.01)
@@ -76,6 +75,43 @@ class MyRnnSpec extends FlatSpec with Matchers {
   def rnnLoss(actuals: Seq[Variable], targets: Seq[Int]): Variable =
     MyRnnLoss(actuals, targets).forward()
 
+  case class Sampler(rnn: MyRnnCell, charToIx: Map[Char, Int], eolIndex: Int) {
+    val vocabSize: Int = charToIx.size
+    val na: Int = rnn.na
+    val ixToChar: Map[Int, Char] = charToIx.map(_.swap)
+
+    @tailrec
+    final def generate(counter: Int,
+                       prevX: Variable,
+                       prevA: Variable,
+                       acc: List[Int]): List[Int] =
+      if (acc.lastOption.contains(eolIndex)) {
+        acc
+      } else if (counter >= 50) {
+        acc :+ eolIndex
+      } else {
+        val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
+        generate(counter + 1, nextX, nextA, acc :+ nextIdx)
+      }
+
+    def generateNextChar(xPrev: Variable,
+                         aPrev: Variable): (Variable, Int, Variable) = {
+      val Seq(yHat, aNext) = rnn(xPrev, aPrev)
+      val vocabSize = xPrev.shape.head
+      val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
+      val xNext = Variable(ns.zerosLike(xPrev.data))
+      xNext.data(nextIdx, 0) := 1
+      (xNext, nextIdx, aNext)
+    }
+
+    def sample(): String = {
+      val x0 = Variable(ns.zeros(vocabSize, 1))
+      val a0 = Variable(ns.zeros(na, 1))
+      val sampledIndices = generate(1, x0, a0, List.empty[Int])
+      sampledIndices.map(ixToChar).mkString
+    }
+  }
+
   "My rnn" should "generate dinosaur names" in {
 
     val data = Source
@@ -99,44 +135,8 @@ class MyRnnSpec extends FlatSpec with Matchers {
       s"There are $dataSize total characters and $vocabSize unique characters in your data")
 
     val charToIx = chars.zipWithIndex.toMap
-    val ixToChar = charToIx.map(_.swap)
-
-    val EolIndex = charToIx('\n')
-    val BolIndex = -1
-
-    def sample(rnn: MyRnnCell, charToIx: Map[Char, Int]): List[Int] = {
-      @tailrec
-      def generate(counter: Int,
-                   prevX: Variable,
-                   prevA: Variable,
-                   acc: List[Int]): List[Int] =
-        if (acc.lastOption.contains(EolIndex)) {
-          acc
-        } else if (counter >= 50) {
-          acc :+ EolIndex
-        } else {
-          val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
-          generate(counter + 1, nextX, nextA, acc :+ nextIdx)
-        }
-
-      def generateNextChar(xPrev: Variable,
-                           aPrev: Variable): (Variable, Int, Variable) = {
-        val Seq(yHat, aNext) = rnn(xPrev, aPrev)
-        val vocabSize = xPrev.shape.head
-        val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
-        val xNext = Variable(ns.zerosLike(xPrev.data))
-        xNext.data(nextIdx, 0) := 1
-        (xNext, nextIdx, aNext)
-      }
-
-      val vocabSize = charToIx.size
-      val na = rnn.na
-
-      val x0 = Variable(ns.zeros(vocabSize, 1))
-      val a0 = Variable(ns.zeros(na, 1))
-
-      generate(1, x0, a0, List.empty[Int])
-    }
+    val EolIndex = charToIx('\n') // index for end of line
+    val BolIndex = -1 // index for beginning of line
 
     def rnnForward(xs: List[Int],
                    aPrev: Variable,
@@ -165,14 +165,16 @@ class MyRnnSpec extends FlatSpec with Matchers {
     }
 
     def model(examples: List[String],
-              ixToChar: Map[Int, Char],
               charToIx: Map[Char, Int],
               numIterations: Int = 35000,
               na: Int = 50,
               numNames: Int = 7,
-              vocabSize: Int = 27): Unit = {
+              vocabSize: Int = 27,
+              printEvery: Int = 1000): Unit = {
       val (nx, ny) = (vocabSize, vocabSize)
       val rnn = MyRnnCell(na, nx, ny)
+
+      val sampler = Sampler(rnn, charToIx, EolIndex)
 
       val aPrev = Variable(ns.zeros(na, 1))
 
@@ -187,20 +189,17 @@ class MyRnnSpec extends FlatSpec with Matchers {
         totalLoss += loss
         aPrev.data := ap.data // seems to have little or no effect. Why?
 
-        val printEvery = 1000
-
         if (j % printEvery == 0) {
           println(s"Iteration: $j, Loss: ${totalLoss / printEvery}")
           for (_ <- 1 to numNames) {
-            val sampledIndices = sample(rnn, charToIx)
-            print(sampledIndices.map(ixToChar).mkString)
+            print(sampler.sample())
           }
           println()
           totalLoss = 0.0
         }
       }
     }
-    model(examples, ixToChar, charToIx)
+    model(examples, charToIx, printEvery = 500)
   }
 
 }
