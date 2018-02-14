@@ -10,107 +10,106 @@ import scala.annotation.tailrec
 import scala.io.Source
 import scala.util.Random
 
+case class MyRnnCell(wax: Variable,
+                     waa: Variable,
+                     wya: Variable,
+                     ba: Variable,
+                     by: Variable)
+    extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
+
+  val List(na, nx) = wax.shape
+  val List(ny, _) = wya.shape
+  val optimizer = SGD(parameters, lr = 0.01)
+
+  override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
+    case Seq(xt, aPrev) =>
+      val aNext = tanh(waa.dot(aPrev) + wax.dot(xt) + ba)
+      val yt = softmax(wya.dot(aNext) + by)
+      Seq(yt, aNext)
+  }
+
+  def clipGradients(maxValue: Double): Unit = {
+    parameters
+      .map(_.grad.get)
+      .foreach(v => v.data := ns.clip(v.data, -maxValue, maxValue))
+  }
+
+  def step(): Unit = optimizer.step()
+}
+
+object MyRnnCell {
+  def apply(na: Int, nx: Int, ny: Int): MyRnnCell = {
+    val wax = Variable(ns.randn(na, nx) * 0.01, name = Some("wax"))
+    val waa = Variable(ns.randn(na, na) * 0.01, name = Some("waa"))
+    val wya = Variable(ns.randn(ny, na) * 0.01, name = Some("wya"))
+    val ba = Variable(ns.zeros(na, 1), name = Some("ba"))
+    val by = Variable(ns.zeros(ny, 1), name = Some("by"))
+    MyRnnCell(wax, waa, wya, ba, by)
+  }
+}
+
+case class MyRnnLoss(actuals: Seq[Variable], targets: Seq[Int])
+    extends Function {
+  override def forward(): Variable = {
+    val seqLoss = actuals.zip(targets).foldLeft(0.0) {
+      case (loss, (yht, y)) =>
+        loss - ns.log(yht.data(y, 0)).squeeze()
+    }
+    Variable(Tensor(seqLoss), Some(this))
+  }
+
+  override def backward(gradOutput: Variable): Unit = {
+    actuals.zip(targets).reverse.foreach {
+      case (yh, y) =>
+        val dy = ns.copy(yh.data)
+        dy(y, 0) -= 1
+        yh.backward(Variable(dy))
+    }
+  }
+}
+
+case class Sampler(rnn: MyRnnCell, charToIx: Map[Char, Int], eolIndex: Int) {
+  val vocabSize: Int = charToIx.size
+  val na: Int = rnn.na
+  val ixToChar: Map[Int, Char] = charToIx.map(_.swap)
+
+  def generateNextChar(xPrev: Variable,
+                       aPrev: Variable): (Variable, Int, Variable) = {
+    val Seq(yHat, aNext) = rnn(xPrev, aPrev)
+    val vocabSize = xPrev.shape.head
+    val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
+    val xNext = Variable(ns.zerosLike(xPrev.data))
+    xNext.data(nextIdx, 0) := 1
+    (xNext, nextIdx, aNext)
+  }
+
+  @tailrec
+  final def generate(counter: Int,
+                     prevX: Variable,
+                     prevA: Variable,
+                     acc: List[Int]): List[Int] =
+    if (acc.lastOption.contains(eolIndex)) {
+      acc
+    } else if (counter >= 50) {
+      acc :+ eolIndex
+    } else {
+      val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
+      generate(counter + 1, nextX, nextA, acc :+ nextIdx)
+    }
+
+  def sample(): String = {
+    val x0 = Variable(ns.zeros(vocabSize, 1))
+    val a0 = Variable(ns.zeros(na, 1))
+    val sampledIndices = generate(1, x0, a0, List.empty[Int])
+    sampledIndices.map(ixToChar).mkString
+  }
+}
+
 class MyRnnSpec extends FlatSpec with Matchers {
 
   ns.rand.setSeed(231)
-
-  case class MyRnnCell(wax: Variable,
-                       waa: Variable,
-                       wya: Variable,
-                       ba: Variable,
-                       by: Variable)
-      extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
-
-    val List(na, nx) = wax.shape
-    val List(ny, _) = wya.shape
-    val optimizer = SGD(parameters, lr = 0.01)
-
-    override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
-      case Seq(xt, aPrev) =>
-        val aNext = tanh(waa.dot(aPrev) + wax.dot(xt) + ba)
-        val yt = softmax(wya.dot(aNext) + by)
-        Seq(yt, aNext)
-    }
-
-    def clipGradients(maxValue: Double): Unit = {
-      parameters
-        .map(_.grad.get)
-        .foreach(v => v.data := ns.clip(v.data, -maxValue, maxValue))
-    }
-
-    def step(): Unit = optimizer.step()
-  }
-
-  object MyRnnCell {
-    def apply(na: Int, nx: Int, ny: Int): MyRnnCell = {
-      val wax = Variable(ns.randn(na, nx) * 0.01, name = Some("wax"))
-      val waa = Variable(ns.randn(na, na) * 0.01, name = Some("waa"))
-      val wya = Variable(ns.randn(ny, na) * 0.01, name = Some("wya"))
-      val ba = Variable(ns.zeros(na, 1), name = Some("ba"))
-      val by = Variable(ns.zeros(ny, 1), name = Some("by"))
-      MyRnnCell(wax, waa, wya, ba, by)
-    }
-  }
-
-  case class MyRnnLoss(actuals: Seq[Variable], targets: Seq[Int])
-      extends Function {
-    override def forward(): Variable = {
-      val seqLoss = actuals.zip(targets).foldLeft(0.0) {
-        case (loss, (yht, y)) =>
-          loss - ns.log(yht.data(y, 0)).squeeze()
-      }
-      Variable(Tensor(seqLoss), Some(this))
-    }
-
-    override def backward(gradOutput: Variable): Unit = {
-      actuals.zip(targets).reverse.foreach {
-        case (yh, y) =>
-          val dy = ns.copy(yh.data)
-          dy(y, 0) -= 1
-          yh.backward(Variable(dy))
-      }
-    }
-  }
-
   def rnnLoss(actuals: Seq[Variable], targets: Seq[Int]): Variable =
     MyRnnLoss(actuals, targets).forward()
-
-  case class Sampler(rnn: MyRnnCell, charToIx: Map[Char, Int], eolIndex: Int) {
-    val vocabSize: Int = charToIx.size
-    val na: Int = rnn.na
-    val ixToChar: Map[Int, Char] = charToIx.map(_.swap)
-
-    @tailrec
-    final def generate(counter: Int,
-                       prevX: Variable,
-                       prevA: Variable,
-                       acc: List[Int]): List[Int] =
-      if (acc.lastOption.contains(eolIndex)) {
-        acc
-      } else if (counter >= 50) {
-        acc :+ eolIndex
-      } else {
-        val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
-        generate(counter + 1, nextX, nextA, acc :+ nextIdx)
-      }
-
-    def generateNextChar(xPrev: Variable,
-                         aPrev: Variable): (Variable, Int, Variable) = {
-      val Seq(yHat, aNext) = rnn(xPrev, aPrev)
-      val vocabSize = xPrev.shape.head
-      val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
-      val xNext = Variable(ns.zerosLike(xPrev.data))
-      xNext.data(nextIdx, 0) := 1
-      (xNext, nextIdx, aNext)
-    }
-
-    def sample(): String = {
-      val x0 = Variable(ns.zeros(vocabSize, 1))
-      val a0 = Variable(ns.zeros(na, 1))
-      val sampledIndices = generate(1, x0, a0, List.empty[Int])
-      sampledIndices.map(ixToChar).mkString
-    }
-  }
 
   "My rnn" should "generate dinosaur names" in {
 
@@ -201,5 +200,4 @@ class MyRnnSpec extends FlatSpec with Matchers {
     }
     model(examples, charToIx, printEvery = 500)
   }
-
 }
