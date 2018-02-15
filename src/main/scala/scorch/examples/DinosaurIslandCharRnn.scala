@@ -12,8 +12,9 @@ import scala.util.Random
 
 /**
   * Dinosaurus Island -- Character level language model
+  * Scorch implementation of assignment 2 in week 1 of the Coursera course "Recurrent Neural Networks" by deeplearning.ai and Andrew Ng.
   */
-object DinosaurIsland extends App {
+object DinosaurIslandCharRnn extends App {
   ns.rand.setSeed(231)
 
   val examples = Random.shuffle(
@@ -40,12 +41,12 @@ object DinosaurIsland extends App {
     LossFunction(actuals, targets).forward()
 
   /**
-    *
-    * @param xs
-    * @param aPrev
-    * @param rnn
-    * @param vocabSize
-    * @return
+    * Performs the forward propagation through the RNN
+    * @param xs sequence of input characters to activate
+    * @param aPrev the previous hidden state
+    * @param rnn the RNN model
+    * @param vocabSize vocabulary size
+    * @return tuple of the predictions of the RNN over xs, and the hidden state of the last activation
     */
   def rnnForward(xs: List[Int],
                  aPrev: Variable,
@@ -132,12 +133,13 @@ object DinosaurIsland extends App {
 }
 
 /**
-  *
-  * @param wax
-  * @param waa
-  * @param wya
-  * @param ba
-  * @param by
+  * Module with standard RNN activation.
+  * Also contains a Gradient Descent optimizer and a method for clipping the gradients to prevent exploding gradients
+  * @param wax Weight matrix multiplying the input, variable of shape (na, nx)
+  * @param waa Weight matrix multiplying the hidden state, variable of shape (na, na)
+  * @param wya Weight matrix relating the hidden-state to the output, variable of shape (ny, na)
+  * @param ba Bias, of shape (na, 1)
+  * @param by Bias relating the hidden-state to the output, of shape (ny, 1)
   */
 case class RnnCell(wax: Variable,
                    waa: Variable,
@@ -239,27 +241,27 @@ case class Sampler(rnn: RnnCell, charToIx: Map[Char, Int], eolIndex: Int) {
   }
 
   /**
-    * Loop over time-steps t. At each time-step, sample a character from a probability distribution and append
+    * Recurse over time-steps t. At each time-step, sample a character from a probability distribution and append
     * its index to "indices". We'll stop if we reach 50 characters (which should be very unlikely with a well
     * trained model), which helps debugging and prevents entering an infinite loop.
     * @param counter current count
     * @param prevX previous character
     * @param prevA previous activation
-    * @param acc accumulator of indices
+    * @param indices accumulator of indices
     * @return acc
     */
   @tailrec
   final def generate(counter: Int,
                      prevX: Variable,
                      prevA: Variable,
-                     acc: List[Int]): List[Int] =
-    if (acc.lastOption.contains(eolIndex)) {
-      acc
+                     indices: List[Int]): List[Int] =
+    if (indices.lastOption.contains(eolIndex)) {
+      indices
     } else if (counter >= 50) {
-      acc :+ eolIndex
+      indices :+ eolIndex
     } else {
       val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
-      generate(counter + 1, nextX, nextA, acc :+ nextIdx)
+      generate(counter + 1, nextX, nextA, indices :+ nextIdx)
     }
 
   def sample(): String = {
