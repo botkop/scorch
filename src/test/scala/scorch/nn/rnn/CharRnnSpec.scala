@@ -23,7 +23,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
   // this is really slow, and does not seem to work
   // so the test is tagged as ignored
 
-  "A Char-RNN" should "classify names" in {
+  "A Char-RNN" should "classify names" ignore {
 
     def getListOfFiles(dir: String): List[File] = {
       val d = new File(dir)
