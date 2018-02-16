@@ -1,6 +1,8 @@
 Scorch
 ======
-Scorch is a neural net framework in Scala inspired by PyTorch.
+Scorch is a lightweight neural net framework in Scala inspired by PyTorch.
+
+It has [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) built in and follows an [imperative coding style](https://mxnet.incubator.apache.org/architecture/program_model.html#symbolic-vs-imperative-programs).
 
 
 ```scala

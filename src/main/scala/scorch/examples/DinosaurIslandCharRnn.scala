@@ -33,7 +33,7 @@ object DinosaurIslandCharRnn extends App {
 
   /**
     * Convenience method for computing the loss.
-    * Instantiates a LossFunction object, and applies it
+    * Instantiates a CrossEntropyLoss object, and applies it
     * @param actuals source for the loss function
     * @param targets targets to compute the loss against
     * @return the loss variable, which can be backpropped into
@@ -170,7 +170,7 @@ object RnnCell {
     * @param na number of units of the RNN cell
     * @param nx size of the weight matrix multiplying the input
     * @param ny size of the weight matrix relating the hidden-state to the output
-    * @return an Rnn model
+    * @return a vanilla Rnn model
     */
   def apply(na: Int, nx: Int, ny: Int): RnnCell = {
     val wax = Variable(ns.randn(na, nx) * 0.01, name = Some("wax"))
