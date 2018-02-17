@@ -12,7 +12,9 @@ import scala.util.Random
 
 /**
   * Dinosaurus Island -- Character level language model
-  * Scorch implementation of assignment 2 in week 1 of the Coursera course "Recurrent Neural Networks" by deeplearning.ai and Andrew Ng.
+  * Assignment 2 in week 1 of the Coursera course "Recurrent Neural Networks" by deeplearning.ai and Andrew Ng.
+  * Implementation in Scala with Scorch.
+  * Scorch lives here: https://github.com/botkop/scorch
   */
 object DinosaurIslandCharRnn extends App {
   ns.rand.setSeed(231)
@@ -137,7 +139,6 @@ object DinosaurIslandCharRnn extends App {
 
 /**
   * Module with vanilla RNN activation.
-  * Also contains a Gradient Descent optimizer and a method for clipping the gradients to prevent exploding gradients
   * @param wax Weight matrix multiplying the input, variable of shape (na, nx)
   * @param waa Weight matrix multiplying the hidden state, variable of shape (na, na)
   * @param wya Weight matrix relating the hidden-state to the output, variable of shape (ny, na)
@@ -149,7 +150,7 @@ case class RnnCell(wax: Variable,
                    wya: Variable,
                    ba: Variable,
                    by: Variable)
-    extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
+  extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
 
   val List(na, nx) = wax.shape
   val List(ny, _) = wya.shape
@@ -188,7 +189,7 @@ object RnnCell {
   * @param targets sequence of Y indices
   */
 case class CrossEntropyLoss(actuals: Seq[Variable], targets: Seq[Int])
-    extends Function {
+  extends Function {
 
   /**
     * Computes the cross entropy loss, and wraps it in a variable.
@@ -218,13 +219,13 @@ case class CrossEntropyLoss(actuals: Seq[Variable], targets: Seq[Int])
 }
 
 /**
-  * Stochastic Gradient Descent with clipping
+  * Stochastic Gradient Descent with clipping to prevent exploding gradients
   * @param parameters list of parameters to optimize
   * @param maxValue  gradients above this number are set to this number, and everything less than -maxValue is set to -maxValue
   * @param lr learning rate
   */
 case class ClippingSGD(parameters: Seq[Variable], maxValue: Double, lr: Double)
-    extends Optimizer(parameters) {
+  extends Optimizer(parameters) {
   override def step(): Unit = {
     parameters.foreach { p =>
       p.data -= ns.clip(p.grad.get.data, -maxValue, maxValue) * lr
@@ -268,24 +269,24 @@ case class Sampler(rnn: RecurrentModule,
     * Recurse over time-steps t. At each time-step, sample a character from a probability distribution and append
     * its index to "indices". We'll stop if we reach 50 characters (which should be very unlikely with a well
     * trained model), which helps debugging and prevents entering an infinite loop.
-    * @param counter current count
+    * @param t current time step
     * @param prevX previous character
     * @param prevA previous activation
     * @param indices accumulator of indices
-    * @return acc
+    * @return indices
     */
   @tailrec
-  final def generate(counter: Int,
+  final def generate(t: Int,
                      prevX: Variable,
                      prevA: Variable,
                      indices: List[Int]): List[Int] =
     if (indices.lastOption.contains(eolIndex)) {
       indices
-    } else if (counter >= 50) {
+    } else if (t >= 50) {
       indices :+ eolIndex
     } else {
       val (nextX, nextIdx, nextA) = generateNextChar(prevX, prevA)
-      generate(counter + 1, nextX, nextA, indices :+ nextIdx)
+      generate(t + 1, nextX, nextA, indices :+ nextIdx)
     }
 
   def sample: String = {
