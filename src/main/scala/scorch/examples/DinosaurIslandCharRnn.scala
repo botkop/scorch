@@ -2,7 +2,7 @@ package scorch.examples
 
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
-import scorch.autograd.{Function, Variable, softmax, tanh}
+import scorch.autograd._
 import scorch.nn.Optimizer
 import scorch.nn.rnn.RecurrentModule
 
@@ -57,11 +57,31 @@ object DinosaurIslandCharRnn extends App {
                  vocabSize: Int = 27): (List[Variable], Variable) =
     xs.foldLeft(List.empty[Variable], aPrev) {
       case ((yHat, a0), x) =>
+        // one hot encoding of next x
         val xt = Variable(ns.zeros(vocabSize, 1))
         if (x != BolIndex)
           xt.data(x, 0) := 1
+
         val Seq(yht, a1) = rnn(xt, a0)
         (yHat :+ yht, a1)
+    }
+
+  def lstmForward(xs: List[Int],
+                  previous: Seq[Variable],
+                  rnn: RecurrentModule,
+                  vocabSize: Int = 27): (List[Variable], Seq[Variable]) =
+    xs.foldLeft(List.empty[Variable], previous) {
+      case ((yhs, p0), x) =>
+        // one hot encoding of next x
+        val xt = Variable(ns.zeros(vocabSize, 1))
+        if (x != BolIndex)
+          xt.data(x, 0) := 1
+
+        val parameters = xt +: p0
+        val next = rnn(parameters:_*)
+        val yht = next.head
+        val p1 = next.tail
+        (yhs :+ yht, p1)
     }
 
   /**
@@ -85,6 +105,19 @@ object DinosaurIslandCharRnn extends App {
     (loss.data.squeeze(), a)
   }
 
+  def lstmOptimize(xs: List[Int],
+                   ys: List[Int],
+                   previous: Seq[Variable],
+                   rnn: RecurrentModule,
+                   optimizer: Optimizer): (Double, Seq[Variable]) = {
+    optimizer.zeroGrad()
+    val (yHat, next) = lstmForward(xs, previous, rnn)
+    val loss = rnnLoss(yHat, ys)
+    loss.backward()
+    optimizer.step()
+    (loss.data.squeeze(), next)
+  }
+
   /**
     * Trains the model and generates dinosaur names
     * @param examples text corpus
@@ -105,13 +138,16 @@ object DinosaurIslandCharRnn extends App {
     val (nx, ny) = (vocabSize, vocabSize)
 
     // define the RNN model
-    val rnn = RnnCell(na, nx, ny)
+    // val rnn = RnnCell(na, nx, ny)
+    val rnn = LstmCell(na, nx, ny)
 
     val optimizer = ClippingSGD(rnn.parameters, maxValue = 5, lr = 0.01)
 
     val sampler = Sampler(rnn, charToIx, EolIndex, na)
 
     val aPrev = Variable(ns.zeros(na, 1))
+    val cPrev = Variable(ns.zeros(na, 1))
+    var previous = Seq(aPrev, cPrev)
 
     var totalLoss = 0.0
 
@@ -120,21 +156,28 @@ object DinosaurIslandCharRnn extends App {
       val xs: List[Int] = BolIndex +: examples(index).map(charToIx).toList
       val ys: List[Int] = xs.tail :+ EolIndex
 
-      val (loss, ap) = optimize(xs, ys, aPrev, rnn, optimizer)
+      // val (loss, ap) = optimize(xs, ys, aPrev, rnn, optimizer)
+      val (loss, next) = lstmOptimize(xs, ys, previous, rnn, optimizer)
       totalLoss += loss
-      aPrev.data := ap.data // seems to have little or no effect. Why?
+      // aPrev.data := ap.data // seems to have little or no effect. Why?
+//      previous = next.map { n =>
+//        Variable(n.data)
+//      }
 
       if (j % printEvery == 0) {
         println(s"Iteration: $j, Loss: ${totalLoss / printEvery}")
         for (_ <- 1 to numNames) {
-          print(sampler.sample)
+          // print(sampler.sample)
         }
         println()
         totalLoss = 0.0
       }
     }
   }
-  model(examples, charToIx, printEvery = 500)
+
+
+
+  model(examples, charToIx, na = 10, printEvery = 1000)
 }
 
 /**
@@ -150,7 +193,7 @@ case class RnnCell(wax: Variable,
                    wya: Variable,
                    ba: Variable,
                    by: Variable)
-  extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
+    extends RecurrentModule(Seq(wax, waa, wya, ba, by)) {
 
   val List(na, nx) = wax.shape
   val List(ny, _) = wya.shape
@@ -161,7 +204,6 @@ case class RnnCell(wax: Variable,
       val yt = softmax(wya.dot(aNext) + by)
       Seq(yt, aNext)
   }
-
 }
 
 object RnnCell {
@@ -184,12 +226,94 @@ object RnnCell {
 }
 
 /**
+  * Implements a single forward step of the LSTM-cell
+  * @param wf Weight matrix of the forget gate, numpy array of shape (na, na + nx)
+  * @param bf Bias of the forget gate, numpy array of shape (na, 1)
+  * @param wi Weight matrix of the update gate, numpy array of shape (na, na + nx)
+  * @param bi Bias of the update gate, numpy array of shape (na, 1)
+  * @param wc Weight matrix of the first "tanh", numpy array of shape (na, na + nx)
+  * @param bc Bias of the first "tanh", numpy array of shape (na, 1)
+  * @param wo Weight matrix of the output gate, numpy array of shape (na, na + nx)
+  * @param bo Bias of the output gate, numpy array of shape (na, 1)
+  * @param wy Weight matrix relating the hidden-state to the output, numpy array of shape (ny, na)
+  * @param by Bias relating the hidden-state to the output, numpy array of shape (ny, 1)
+  */
+case class LstmCell(
+    wf: Variable,
+    bf: Variable,
+    wi: Variable,
+    bi: Variable,
+    wc: Variable,
+    bc: Variable,
+    wo: Variable,
+    bo: Variable,
+    wy: Variable,
+    by: Variable
+) extends RecurrentModule(Seq(wf, bf, wi, bi, wc, bc, wo, bo, wy, by)) {
+  val List(ny, na) = wy.shape
+
+  /**
+    * Lstm cell forward pass
+    * @param xs sequence of Variables:
+    *           - xt: your input data at timestep "t", of shape (nx, m).
+    *           - aPrev: Hidden state at timestep "t-1", of shape (na, m)
+    *           - cPrev: Memory state at timestep "t-1", numpy array of shape (na, m)
+    * @return sequence of Variables:
+    *         - aNext: next hidden state, of shape (na, m)
+    *         - cNext: next memory state, of shape (na, m)
+    *         - ytHat: prediction at timestep "t", of shape (ny, m)
+    */
+  override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
+    case Seq(xt, aPrev, cPrev) =>
+      // val concat = scorch.cat(aPrev, xt)
+
+      val concat = Variable(ns.concatenate(Seq(aPrev.data, xt.data)))
+
+      // Forget gate
+      val ft = sigmoid(wf.dot(concat) + bf)
+      // Update gate
+      val it = sigmoid(wi.dot(concat) + bi)
+      val cct = tanh(wc.dot(concat) + bc)
+      val cNext = ft * cPrev + it * cct
+      // Output gate
+      val ot = sigmoid(wo.dot(concat) + bo)
+      val aNext = ot * tanh(cNext)
+      val ytHat = softmax(wy.dot(aNext) + by)
+      Seq(ytHat, aNext, cNext)
+  }
+}
+
+object LstmCell {
+
+  /**
+    * Create an LstmCell from dimensions
+    * @param na number of units of the LstmCell
+    * @param nx size of the weight matrix multiplying the input
+    * @param ny size of the weight matrix relating the hidden-state to the output
+    * @return initialized Lstm cell
+    */
+  def apply(na: Int, nx: Int, ny: Int): LstmCell = {
+    val wf = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wf"))
+    val bf = Variable(ns.zeros(na, 1), name = Some("bf"))
+    val wi = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wi"))
+    val bi = Variable(ns.zeros(na, 1), name = Some("bi"))
+    val wc = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wc"))
+    val bc = Variable(ns.zeros(na, 1), name = Some("bc"))
+    val wo = Variable(ns.randn(na, na + nx) * 0.01, name = Some("bo"))
+    val bo = Variable(ns.zeros(na, 1), name = Some("by"))
+    val wy = Variable(ns.randn(ny, na) * 0.01, name = Some("wy"))
+    val by = Variable(ns.zeros(ny, 1), name = Some("ba"))
+    LstmCell(wf, bf, wi, bi, wc, bc, wo, bo, wy, by)
+  }
+}
+
+/**
   * Computes the cross-entropy loss
   * @param actuals sequence of yHat variables
   * @param targets sequence of Y indices
   */
 case class CrossEntropyLoss(actuals: Seq[Variable], targets: Seq[Int])
-  extends Function {
+    extends Function {
 
   /**
     * Computes the cross entropy loss, and wraps it in a variable.
@@ -225,7 +349,7 @@ case class CrossEntropyLoss(actuals: Seq[Variable], targets: Seq[Int])
   * @param lr learning rate
   */
 case class ClippingSGD(parameters: Seq[Variable], maxValue: Double, lr: Double)
-  extends Optimizer(parameters) {
+    extends Optimizer(parameters) {
   override def step(): Unit = {
     parameters.foreach { p =>
       p.data -= ns.clip(p.grad.get.data, -maxValue, maxValue) * lr
