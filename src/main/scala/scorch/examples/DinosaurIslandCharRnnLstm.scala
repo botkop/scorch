@@ -69,19 +69,15 @@ object DinosaurIslandCharRnnLstm extends App {
     }
 
     val optimizer = ClippingSGD(rnn.parameters, maxValue = 5, lr = 0.05)
-
     val sampler = Sampler(rnn, charToIx, EosIndex, na)
 
     var totalLoss = 0.0
-
     for (j <- 1 to numIterations) {
       val index = j % examples.length
       val xs: List[Int] = BosIndex +: examples(index).map(charToIx).toList
       val ys: List[Int] = xs.tail :+ EosIndex
 
-      val pPrev = rnn.initialTrackingStates
-
-      val loss = optimize(xs, ys, pPrev, rnn, optimizer)
+      val loss = optimize(xs, ys, rnn, optimizer)
       totalLoss += loss
 
       if (j % printEvery == 0) {
@@ -108,16 +104,14 @@ object DinosaurIslandCharRnnLstm extends App {
   /**
     * Performs the forward propagation through the RNN
     * @param xs sequence of input characters to activate
-    * @param previous the previous hidden state(s)
     * @param rnn the RNN model
     * @param vocabSize vocabulary size
     * @return tuple of the predictions of the RNN over xs, and the hidden state of the last activation
     */
   def rnnForward(xs: List[Int],
-                 previous: Seq[Variable],
-                 rnn: RecurrentModule,
+                 rnn: BaseRnnCell,
                  vocabSize: Int = 27): List[Variable] =
-    xs.foldLeft(List.empty[Variable], previous) {
+    xs.foldLeft(List.empty[Variable], rnn.initialTrackingStates) {
         case ((yhs, p0), x) =>
           // one hot encoding of next x
           val xt = Variable(ns.zeros(vocabSize, 1))
@@ -135,17 +129,15 @@ object DinosaurIslandCharRnnLstm extends App {
     * Execute one step of the optimization to train the model
     * @param xs list of integers, where each integer is a number that maps to a character in the vocabulary
     * @param ys list of integers, exactly the same as xs but shifted one index to the left
-    * @param previous previous hidden state(s)
     * @param rnn the RNN model to work with
     * @return tuple of the value of the loss function (cross-entropy) and the last hidden state
     */
   def optimize(xs: List[Int],
                ys: List[Int],
-               previous: Seq[Variable],
-               rnn: RecurrentModule,
+               rnn: BaseRnnCell,
                optimizer: Optimizer): Double = {
     optimizer.zeroGrad()
-    val yHat = rnnForward(xs, previous, rnn)
+    val yHat = rnnForward(xs, rnn)
     val loss = rnnLoss(yHat, ys)
     loss.backward()
     optimizer.step()
@@ -357,6 +349,12 @@ object DinosaurIslandCharRnnLstm extends App {
     val vocabSize: Int = charToIx.size
     val ixToChar: Map[Int, Char] = charToIx.map(_.swap)
 
+    /**
+      * Reuse the previously generated character and hidden state to generate the next character
+      * @param xPrev the previous character
+      * @param pPrev the previous state
+      * @return tuple of (next character, index of the next character, the next state)
+      */
     def generateNextChar(
         xPrev: Variable,
         pPrev: Seq[Variable]): (Variable, Int, Seq[Variable]) = {
@@ -371,6 +369,16 @@ object DinosaurIslandCharRnnLstm extends App {
       (xNext, nextIdx, pNext)
     }
 
+    /**
+      * Recurse over time-steps t. At each time-step, sample a character from a probability distribution and append
+      * its index to "indices". We'll stop if we reach 50 characters (which should be very unlikely with a well
+      * trained model), which helps debugging and prevents entering an infinite loop.
+      * @param t current time step
+      * @param prevX previous character
+      * @param prev previous activation
+      * @param indices accumulator of indices
+      * @return indices
+      */
     @tailrec
     final def generate(t: Int,
                        prevX: Variable,
