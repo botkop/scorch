@@ -37,7 +37,8 @@ case class Adam(parameters: Seq[Variable],
                 lr: Double,
                 beta1: Double = 0.9,
                 beta2: Double = 0.999,
-                epsilon: Double = 1e-8) extends Optimizer(parameters) {
+                epsilon: Double = 1e-8)
+    extends Optimizer(parameters) {
 
   val ms: Seq[Tensor] = parameters.map(p => ns.zeros(p.shape: _*))
   val vs: Seq[Tensor] = parameters.map(p => ns.zeros(p.shape: _*))
@@ -62,3 +63,5 @@ case class Adam(parameters: Seq[Variable],
       t += 1
   }
 }
+
+
