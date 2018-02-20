@@ -38,7 +38,7 @@ object DinosaurIslandCharRnnLstm extends App {
   val EosIndex = charToIx('\n') // index for end of sentence
   val BosIndex = -1 // index for beginning of sentence
 
-  model("rnn", examples, charToIx, na = 10, printEvery = 100)
+  model("gru", examples, charToIx, na = 10, printEvery = 100)
 
   /**
     * Trains the model and generates dinosaur names
@@ -65,6 +65,7 @@ object DinosaurIslandCharRnnLstm extends App {
     val rnn = cellType match {
       case "rnn"  => RnnCell(na, nx, ny)
       case "lstm" => LstmCell(na, nx, ny)
+      case "gru"  => GruCell(na, nx, ny)
       case u      => throw new Error(s"unknown cell type $u")
     }
 
@@ -196,8 +197,8 @@ object DinosaurIslandCharRnnLstm extends App {
       wy: Variable,
       by: Variable
   ) extends BaseRnnCell(Seq(wf, bf, wi, bi, wc, bc, wo, bo, wy, by)) {
-    val List(ny, na) = wy.shape
-    override val numTrackingStates = 2
+    override val na: Int = wy.shape.last
+    override val numTrackingStates: Int = 2
 
     /**
       * Lstm cell forward pass
@@ -254,6 +255,136 @@ object DinosaurIslandCharRnnLstm extends App {
     }
   }
 
+  case class GruCell(
+      wir: Variable,
+      bir: Variable,
+      whr: Variable,
+      bhr: Variable,
+      wiz: Variable,
+      biz: Variable,
+      whz: Variable,
+      bhz: Variable,
+      win: Variable,
+      bin: Variable,
+      whn: Variable,
+      bhn: Variable,
+      wy: Variable,
+      by: Variable
+  ) extends BaseRnnCell(Seq(wir,
+                              bir,
+                              whr,
+                              bhr,
+                              wiz,
+                              biz,
+                              whz,
+                              bhz,
+                              win,
+                              bin,
+                              whn,
+                              bhn,
+                              wy,
+                              by)) {
+    override val na: Int = wir.shape.head
+    override val numTrackingStates: Int = 1
+
+    override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
+      case Seq(pxt, ph0) =>
+        // same problem as with LSTM: why is this causing recursion?
+        val xt = Variable(pxt.data)
+        val h0 = Variable(ph0.data)
+
+        val rt = sigmoid(wir.dot(xt) + bir + whr.dot(h0) + bhr)
+        val zt = sigmoid(wiz.dot(xt) + biz + whz.dot(h0) + bhz)
+        val nt = tanh(win.dot(xt) + bin + rt * (whn.dot(h0) + bhn))
+        val ht = (1 - zt) * nt + zt * h0
+        val ytHat = softmax(wy.dot(ht) + by)
+        Seq(ytHat, ht)
+    }
+  }
+
+  object GruCell {
+    def apply(na: Int, nx: Int, ny: Int): GruCell = {
+      // na : hidden size
+      // nx: input size
+      val wir = Variable(ns.randn(na, nx) * 0.01, name = Some("wir"))
+      val wiz = Variable(ns.randn(na, nx) * 0.01, name = Some("wiz"))
+      val win = Variable(ns.randn(na, nx) * 0.01, name = Some("win"))
+
+      val bir = Variable(ns.zeros(na, 1), name = Some("bir"))
+      val biz = Variable(ns.zeros(na, 1), name = Some("biz"))
+      val bin = Variable(ns.zeros(na, 1), name = Some("bin"))
+
+      val whr = Variable(ns.randn(na, na) * 0.01, name = Some("whr"))
+      val whz = Variable(ns.randn(na, na) * 0.01, name = Some("whz"))
+      val whn = Variable(ns.randn(na, na) * 0.01, name = Some("whn"))
+
+      val bhr = Variable(ns.zeros(na, 1), name = Some("bhr"))
+      val bhz = Variable(ns.zeros(na, 1), name = Some("bhz"))
+      val bhn = Variable(ns.zeros(na, 1), name = Some("bhn"))
+
+      val wy = Variable(ns.randn(ny, na) * 0.01, name = Some("wy"))
+      val by = Variable(ns.zeros(ny, 1), name = Some("by"))
+
+      GruCell(wir,
+              bir,
+              whr,
+              bhr,
+              wiz,
+              biz,
+              whz,
+              bhz,
+              win,
+              bin,
+              whn,
+              bhn,
+              wy,
+              by)
+    }
+  }
+
+  /*
+  case class GruCell(wc: Variable,
+                     bc: Variable,
+                     wu: Variable,
+                     bu: Variable,
+                     wr: Variable,
+                     br: Variable,
+                     wy: Variable,
+                     by: Variable)
+      extends BaseRnnCell(Seq(wc, bc, wu, bu, wr, br, wy, by)) {
+    override def na: Int = wc.shape.head
+    override def numTrackingStates: Int = 1
+
+    override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
+      case Seq(xt, c0) =>
+        val concat = Variable(ns.concatenate(Seq(c0.data, xt.data)))
+
+        val uGate = sigmoid(wu.dot(concat) + bu)
+        //val rGate = sigmoid(wr.dot(concat) + br)
+        val cTilde = tanh(wc.dot(concat) + bc)
+        // val cTilde = tanh(wc.dot(rGate * concat) + bc)
+        val ct = uGate * cTilde + (1 - uGate) + c0
+        val yHat = softmax(wy.dot(ct) + by)
+
+        Seq(yHat, ct)
+    }
+  }
+
+  object GruCell {
+    def apply(na: Int, nx: Int, ny: Int): GruCell = {
+      val wc = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wc"))
+      val bc = Variable(ns.zeros(na, 1), name = Some("bc"))
+      val wu = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wu"))
+      val bu = Variable(ns.zeros(na, 1), name = Some("bu"))
+      val wr = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wr"))
+      val br = Variable(ns.zeros(na, 1), name = Some("br"))
+      val wy = Variable(ns.randn(ny, na) * 0.01, name = Some("wy"))
+      val by = Variable(ns.zeros(ny, 1), name = Some("by"))
+      GruCell(wc, bc, wu, bu, wr, br, wy, by)
+    }
+  }
+   */
+
   /**
     * Module with vanilla RNN activation.
     * @param wax Weight matrix multiplying the input, variable of shape (na, nx)
@@ -269,8 +400,7 @@ object DinosaurIslandCharRnnLstm extends App {
                      by: Variable)
       extends BaseRnnCell(Seq(wax, waa, wya, ba, by)) {
 
-    val List(na, nx) = wax.shape
-    val List(ny, _) = wya.shape
+    override val na: Int = wax.shape.head
     override val numTrackingStates: Int = 1
 
     override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
