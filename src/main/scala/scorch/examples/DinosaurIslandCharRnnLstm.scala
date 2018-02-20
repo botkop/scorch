@@ -107,7 +107,7 @@ object DinosaurIslandCharRnnLstm extends App {
     * @param xs sequence of input characters to activate
     * @param rnn the RNN model
     * @param vocabSize vocabulary size
-    * @return tuple of the predictions of the RNN over xs, and the hidden state of the last activation
+    * @return predictions of the RNN over xs
     */
   def rnnForward(xs: List[Int],
                  rnn: BaseRnnCell,
