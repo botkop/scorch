@@ -38,7 +38,7 @@ object DinosaurIslandCharRnnLstm extends App {
   val EosIndex = charToIx('\n') // index for end of sentence
   val BosIndex = -1 // index for beginning of sentence
 
-  model("gru", examples, charToIx, na = 10, printEvery = 100)
+  model("lstm", examples, charToIx, na = 10, printEvery = 100)
 
   /**
     * Trains the model and generates dinosaur names
@@ -211,9 +211,8 @@ object DinosaurIslandCharRnnLstm extends App {
       */
     override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
       case Seq(xt, aPrev, cPrev) =>
-        // val concat = scorch.cat(aPrev, xt) // not clear why this is causing endless recursion
-
-        val concat = Variable(ns.concatenate(Seq(aPrev.data, xt.data)))
+        val concat = scorch.cat(aPrev, xt)
+        // val concat = Variable(ns.concatenate(Seq(aPrev.data, xt.data)))
 
         // Forget gate
         val ft = sigmoid(wf.dot(concat) + bf)
@@ -225,7 +224,7 @@ object DinosaurIslandCharRnnLstm extends App {
         val ot = sigmoid(wo.dot(concat) + bo)
         val aNext = ot * tanh(cNext)
         val ytHat = softmax(wy.dot(aNext) + by)
-        Seq(ytHat, aNext, cNext)
+        Seq(ytHat, aNext.detach(), cNext.detach())
     }
   }
 
@@ -286,17 +285,13 @@ object DinosaurIslandCharRnnLstm extends App {
     override val numTrackingStates: Int = 1
 
     override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
-      case Seq(pxt, ph0) =>
-        // same problem as with LSTM: why is this causing recursion?
-        val xt = Variable(pxt.data)
-        val h0 = Variable(ph0.data)
-
+      case Seq(xt, h0) =>
         val rt = sigmoid(wir.dot(xt) + bir + whr.dot(h0) + bhr)
         val zt = sigmoid(wiz.dot(xt) + biz + whz.dot(h0) + bhz)
         val nt = tanh(win.dot(xt) + bin + rt * (whn.dot(h0) + bhn))
         val ht = (1 - zt) * nt + zt * h0
         val ytHat = softmax(wy.dot(ht) + by)
-        Seq(ytHat, ht)
+        Seq(ytHat, ht.detach())
     }
   }
 
