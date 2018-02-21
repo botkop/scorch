@@ -7,13 +7,13 @@ class FunctionSpec extends FlatSpec with Matchers {
 
   "Function" should "transpose" in {
     val v = Variable(ns.randn(4, 6))
-    val w = Variable(ns.randn(3, 2))
+    val w = Variable(ns.randn(6, 4))
 
     val vt = v.t()
     vt.shape shouldBe List(6, 4)
 
     vt.backward(w)
-    v.grad.get.shape shouldBe List(2, 3)
+    v.grad.shape shouldBe List(4, 6)
   }
 
   it should "do a dot product" in {
@@ -27,22 +27,22 @@ class FunctionSpec extends FlatSpec with Matchers {
     val g = Variable(ns.arange(6).reshape(z.shape.toArray))
     z.backward(g)
 
-    println(x.grad.get.data)
-    println(y.grad.get.data)
+    println(x.grad.data)
+    println(y.grad.data)
 
-    x.grad.get.data.data shouldBe Array( //
+    x.grad.data.data shouldBe Array( //
         1, 3, 5, //
         7, 3, 13, //
         23, 33, 5, //
         23, 41, 59)
-    x.grad.get.shape shouldBe List(3, 4)
+    x.grad.shape shouldBe List(3, 4)
 
-    y.grad.get.data.data shouldBe Array( //
+    y.grad.data.data shouldBe Array( //
         40, 52, //
         46, 61, //
         52, 70, //
         58, 79)
-    y.grad.get.shape shouldBe List(4, 2)
+    y.grad.shape shouldBe List(4, 2)
   }
 
   it should "do an affine operation" in {
@@ -69,10 +69,10 @@ class FunctionSpec extends FlatSpec with Matchers {
     y.backward(dy)
 
 
-    println(w.grad.get.shape)
-    println(b.grad.get)
+    println(w.grad.shape)
+    println(b.grad)
 
-    println(ns.sum(b.grad.get.data, axis=0))
+    println(ns.sum(b.grad.data, axis=0))
 
   }
 

@@ -26,11 +26,11 @@ class AutoGradSpec extends FlatSpec with Matchers {
     println(q.grad)
     println(f.grad)
 
-    assert(x.grad.get.data.squeeze() == -4)
-    assert(y.grad.get.data.squeeze() == -4)
-    assert(z.grad.get.data.squeeze() == 3)
-    assert(q.grad.get.data.squeeze() == -4)
-    assert(f.grad.get.data.squeeze() == 1)
+    assert(x.grad.data.squeeze() == -4)
+    assert(y.grad.data.squeeze() == -4)
+    assert(z.grad.data.squeeze() == 3)
+    assert(q.grad.data.squeeze() == -4)
+    assert(f.grad.data.squeeze() == 1)
 
   }
 
@@ -57,47 +57,47 @@ class AutoGradSpec extends FlatSpec with Matchers {
     implicit val doubleEquality: Equality[Double] =
       TolerantNumerics.tolerantDoubleEquality(0.01)
 
-    assert(w0.grad.get.data.squeeze() === -0.2)
-    assert(x0.grad.get.data.squeeze() === 0.39)
-    assert(w1.grad.get.data.squeeze() === -0.39)
-    assert(x1.grad.get.data.squeeze() === -0.59)
-    assert(w2.grad.get.data.squeeze() === 0.2)
+    assert(w0.grad.data.squeeze() === -0.2)
+    assert(x0.grad.data.squeeze() === 0.39)
+    assert(w1.grad.data.squeeze() === -0.39)
+    assert(x1.grad.data.squeeze() === -0.59)
+    assert(w2.grad.data.squeeze() === 0.2)
 
   }
 
   it should "derive constants as 1" in {
     val x = Variable(3)
     x.backward()
-    assert(x.grad.get.data.squeeze() == 1)
+    assert(x.grad.data.squeeze() == 1)
 
     val y = Variable(ns.full(Array(3, 3), -2))
     y.backward()
-    assert(ns.arrayEqual(y.grad.get.data, ns.ones(3, 3)))
+    assert(ns.arrayEqual(y.grad.data, ns.ones(3, 3)))
 
     val z = Variable(ns.zeros(3, 3))
     z.backward()
-    assert(ns.arrayEqual(z.grad.get.data, ns.ones(3, 3)))
+    assert(ns.arrayEqual(z.grad.data, ns.ones(3, 3)))
   }
 
   it should "derive multiplication with a constant" in {
     val x = Variable(3)
     val y = x * 3
     y.backward()
-    assert(x.grad.get.data.squeeze() == 3)
+    assert(x.grad.data.squeeze() == 3)
   }
 
   it should "derive multiplication with itself" in {
     val x = Variable(3)
     val y = x * x
     y.backward()
-    assert(x.grad.get.data.squeeze() == 6)
+    assert(x.grad.data.squeeze() == 6)
   }
 
   it should "derive square" in {
     val x = Variable(3)
     val y = x ** 2
     y.backward()
-    assert(x.grad.get.data.squeeze() == 6)
+    assert(x.grad.data.squeeze() == 6)
   }
 
   it should "derive division with a constant" in {
@@ -107,7 +107,7 @@ class AutoGradSpec extends FlatSpec with Matchers {
     val x = Variable(3)
     val y = x / 3
     y.backward()
-    assert(x.grad.get.data.squeeze() === 0.33)
+    assert(x.grad.data.squeeze() === 0.33)
   }
 
   it should "derive the mean" in {
@@ -116,8 +116,8 @@ class AutoGradSpec extends FlatSpec with Matchers {
     val z = y * y * 3
     val out = mean(z)
     out.backward()
-    println(x.grad.get.data)
-    assert(ns.arrayEqual(x.grad.get.data, ns.full(x.data.shape, 4.5)))
+    println(x.grad.data)
+    assert(ns.arrayEqual(x.grad.data, ns.full(x.data.shape, 4.5)))
   }
 
   it should "do crazy stuff" in {
@@ -125,16 +125,16 @@ class AutoGradSpec extends FlatSpec with Matchers {
     val y = x * 2
     def acc(v: Variable): Variable = if (ns.sum(v.data) < 100) acc(v * 2) else v
     val z = acc(y)
-    z.backward(Variable(Tensor(0.1, 1.0, 0.0001)))
+    z.backward(Variable(Tensor(0.1, 1.0, 0.0001).reshape(3, 1)))
     println(x.grad)
-    assert(ns.arrayEqual(x.grad.get.data, Tensor(6.4, 64, 0.0064)))
+    assert(ns.arrayEqual(x.grad.data, Tensor(6.4, 64, 0.0064).reshape(3, 1)))
   }
 
   it should "derive mse" in {
     val nOut = 4
     val minibatch = 3
 
-    val input  = Variable(ns.randn(minibatch, nOut))
+    val input = Variable(ns.randn(minibatch, nOut))
     val label = Variable(ns.randn(minibatch, nOut))
 
     val diff = input - label
@@ -146,7 +146,7 @@ class AutoGradSpec extends FlatSpec with Matchers {
 
     avgMSE.backward()
 
-    input.grad.get.shape shouldBe input.shape
+    input.grad.shape shouldBe input.shape
 
   }
 

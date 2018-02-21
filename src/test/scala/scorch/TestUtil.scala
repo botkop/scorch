@@ -80,8 +80,8 @@ object TestUtil extends LazyLogging {
 
     out.backward(dOut)
 
-    val da = a.grad.get.data
-    val db = b.grad.get.data
+    val da = a.grad.data
+    val db = b.grad.data
 
     logger.debug(s"da = $da")
     logger.debug(s"db = $db")
@@ -115,7 +115,7 @@ object TestUtil extends LazyLogging {
     logger.debug(s"dOut = $dOut")
 
     out.backward(dOut)
-    val da = a.grad.get.data
+    val da = a.grad.data
     logger.debug(s"da = $da")
 
     def fa(t: Tensor) = f(Variable(t), b).data
@@ -138,7 +138,7 @@ object TestUtil extends LazyLogging {
 
     out.backward(dOut)
 
-    val da = a.grad.get.data
+    val da = a.grad.data
     logger.debug(s"da = $da")
 
     def fa(t: Tensor) = f(Variable(t)).data

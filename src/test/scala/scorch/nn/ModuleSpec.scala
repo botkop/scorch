@@ -22,7 +22,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     val dout = Variable(ns.randn(numSamples, numClasses))
 
     out.backward(dout)
-    input.grad.get.data.shape shouldBe Array(numSamples, numFeatures)
+    input.grad.data.shape shouldBe Array(numSamples, numFeatures)
     println(input.grad)
 
   }
@@ -44,11 +44,11 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     fc.parameters().foreach { p =>
       println(p.data.shape.toList)
-      println(p.grad.get.data.shape.toList)
-      p.data.shape shouldBe p.grad.get.data.shape
+      println(p.grad.data.shape.toList)
+      p.data.shape shouldBe p.grad.data.shape
     }
 
-    input.grad.get.data.shape shouldBe Array(numSamples, numFeatures)
+    input.grad.data.shape shouldBe Array(numSamples, numFeatures)
 
   }
 

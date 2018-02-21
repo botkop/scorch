@@ -83,9 +83,7 @@ object DinosaurIslandCharRnnLstm extends App {
 
       if (j % printEvery == 0) {
         println(s"Iteration: $j, Loss: ${totalLoss / printEvery}")
-        for (_ <- 1 to numNames) {
-          print(sampler.sample)
-        }
+        (1 to numNames).foreach(_ => print(sampler.sample))
         println()
         totalLoss = 0.0
       }
@@ -543,7 +541,7 @@ object DinosaurIslandCharRnnLstm extends App {
       extends Optimizer(parameters) {
     override def step(): Unit =
       parameters.foreach { p =>
-        p.data -= ns.clip(p.grad.get.data, -maxValue, maxValue) * lr
+        p.data -= ns.clip(p.grad.data, -maxValue, maxValue) * lr
       }
   }
 }

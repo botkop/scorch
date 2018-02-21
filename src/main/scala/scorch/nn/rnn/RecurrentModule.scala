@@ -34,5 +34,5 @@ abstract class RecurrentModule(localParameters: Seq[Variable] = Nil)
   def parameters: Seq[Variable] =
     localParameters ++ subModules.flatMap(_.parameters())
   def zeroGrad(): Unit =
-    parameters.flatMap(_.grad).foreach(g => g.data := 0)
+    parameters.map(_.grad).foreach(g => g.data := 0)
 }

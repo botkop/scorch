@@ -7,14 +7,14 @@ import botkop.{numsca => ns}
 abstract class Optimizer(parameters: Seq[Variable]) {
   def step(): Unit
   def zeroGrad(): Unit =
-    parameters.flatMap(_.grad).foreach(g => g.data := 0)
+    parameters.map(_.grad).foreach(g => g.data := 0)
 }
 
 case class SGD(parameters: Seq[Variable], lr: Double)
     extends Optimizer(parameters) {
   override def step(): Unit = {
     parameters.foreach { p =>
-      p.data -= p.grad.get.data * lr
+      p.data -= p.grad.data * lr
     }
   }
 }
@@ -28,7 +28,7 @@ case class Nesterov(parameters: Seq[Variable], lr: Double, beta: Double = 0.9)
     case (p, v) =>
       val vPrev = v.copy()
       v *= beta
-      v -= lr * p.grad.get.data
+      v -= lr * p.grad.data
       p.data += (-beta * vPrev) + (1 + beta) * v
   }
 }
@@ -48,7 +48,7 @@ case class Adam(parameters: Seq[Variable],
   override def step(): Unit = parameters.zip(ms).zip(vs).foreach {
     case ((p, m), v) =>
       val x = p.data
-      val dx = p.grad.get.data
+      val dx = p.grad.data
 
       m *= beta1
       m += (1 - beta1) * dx

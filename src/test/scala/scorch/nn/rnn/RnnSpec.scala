@@ -56,11 +56,11 @@ class RnnSpec extends FlatSpec with Matchers {
     val dNextH = Variable(ns.randn(out.shape: _*))
     out.backward(dNextH)
 
-    val dx = x.grad.get.data.copy()
-    val dh = h.grad.get.data.copy()
-    val dwX = wX.grad.get.data.copy()
-    val dwH = wH.grad.get.data.copy()
-    val db = b.grad.get.data.copy()
+    val dx = x.grad.data.copy()
+    val dh = h.grad.data.copy()
+    val dwX = wX.grad.data.copy()
+    val dwH = wH.grad.data.copy()
+    val db = b.grad.data.copy()
 
     def fx(t: Tensor): Tensor =
       RnnFunction.stepForward(Variable(t), h, wX, wH, b).data
@@ -142,7 +142,7 @@ class RnnSpec extends FlatSpec with Matchers {
     val dOut = Variable(ns.randn(out.shape.toArray))
     out.backward(dOut)
 
-    val dx = x.grad.get.data
+    val dx = x.grad.data
     def fx(t: Tensor): Tensor =
       RnnFunction(Variable(t), h0, wX, wH, b).forward().data
     val dxNum = evalNumericalGradientArray(fx, x.data, dOut.data)
@@ -150,7 +150,7 @@ class RnnSpec extends FlatSpec with Matchers {
     println(dxError)
     assert(dxError < 1e-7)
 
-    val dh0 = h0.grad.get.data
+    val dh0 = h0.grad.data
     def fh0(t: Tensor): Tensor =
       RnnFunction(x, Variable(t), wX, wH, b).forward().data
     val dh0Num = evalNumericalGradientArray(fh0, h0.data, dOut.data)
@@ -158,7 +158,7 @@ class RnnSpec extends FlatSpec with Matchers {
     println(dh0Error)
     assert(dh0Error < 1e-7)
 
-    val dwX = wX.grad.get.data
+    val dwX = wX.grad.data
     def fwX(t: Tensor): Tensor =
       RnnFunction(x, h0, Variable(t), wH, b).forward().data
     val dwXNum = evalNumericalGradientArray(fwX, wX.data, dOut.data)
@@ -166,7 +166,7 @@ class RnnSpec extends FlatSpec with Matchers {
     println(dwXError)
     assert(dwXError < 1e-7)
 
-    val dwH = wH.grad.get.data
+    val dwH = wH.grad.data
     def fwH(t: Tensor): Tensor =
       RnnFunction(x, h0, wX, Variable(t), b).forward().data
     val dwHNum = evalNumericalGradientArray(fwH, wH.data, dOut.data)
@@ -174,7 +174,7 @@ class RnnSpec extends FlatSpec with Matchers {
     println(dwHError)
     assert(dwHError < 1e-7)
 
-    val db = b.grad.get.data
+    val db = b.grad.data
     def fb(t: Tensor): Tensor =
       RnnFunction(x, h0, wX, wH, Variable(t)).forward().data
     val dbNum = evalNumericalGradientArray(fb, b.data, dOut.data)

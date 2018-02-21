@@ -60,9 +60,10 @@ case class RnnFunction(x: Variable,
     // still need to update x.grad!!!!!!!!!
     val gData = ns.zerosLike(x.data)
     for (i <- 0 until t) {
-      gData(:>, i, :>) := xs(i).g.get
+      // gData(:>, i, :>) := xs(i).g.get
     }
-    x.g = Some(gData)
+    // todo: fix this !!!!!!!!!!!!!1
+    // x.g = Some(gData)
   }
 }
 

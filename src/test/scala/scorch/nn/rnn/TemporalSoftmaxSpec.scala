@@ -42,8 +42,9 @@ class TemporalSoftmaxSpec extends FlatSpec with Matchers {
 
     val out = TemporalSoftmaxFunction(x, y, mask).forward()
     out.backward()
-    val dx = x.grad.get.data.copy
-    x.g = None
+    val dx = x.grad.data.copy
+    // todo: why was this set to None?
+    // x.g = None
 
     def fx(a: Tensor) =
       TemporalSoftmaxFunction(Variable(a), y, mask).forward().data.squeeze()
