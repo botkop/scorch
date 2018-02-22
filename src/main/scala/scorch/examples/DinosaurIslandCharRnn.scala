@@ -19,9 +19,9 @@ import scala.util.Random
   * We will build a character level language model to generate new dinosaur names.
   * The algorithm will learn the different name patterns, and randomly generate new names.
   * The dataset to train on is in "src/test/resources/dinos.txt".
-  * Both vanilla RNN and LSTM are provided.
+  * Both vanilla RNN, GRU and LSTM are provided.
   */
-object DinosaurIslandCharRnnLstm extends App {
+object DinosaurIslandCharRnn extends App {
   ns.rand.setSeed(231)
   Random.setSeed(231)
 
@@ -38,7 +38,7 @@ object DinosaurIslandCharRnnLstm extends App {
   val EosIndex = charToIx('\n') // index for end of sentence
   val BosIndex = -1 // index for beginning of sentence
 
-  model("lstm", examples, charToIx, na = 10, printEvery = 100)
+  model("gru", examples, charToIx, na = 10, printEvery = 100)
 
   /**
     * Trains the model and generates dinosaur names
@@ -299,6 +299,7 @@ object DinosaurIslandCharRnnLstm extends App {
     def apply(na: Int, nx: Int, ny: Int): GruCell = {
       // na : hidden size
       // nx: input size
+      // ny: output size
       val wir = Variable(ns.randn(na, nx) * 0.01, name = Some("wir"))
       val wiz = Variable(ns.randn(na, nx) * 0.01, name = Some("wiz"))
       val win = Variable(ns.randn(na, nx) * 0.01, name = Some("win"))
@@ -334,49 +335,6 @@ object DinosaurIslandCharRnnLstm extends App {
               by)
     }
   }
-
-  /*
-  case class GruCell(wc: Variable,
-                     bc: Variable,
-                     wu: Variable,
-                     bu: Variable,
-                     wr: Variable,
-                     br: Variable,
-                     wy: Variable,
-                     by: Variable)
-      extends BaseRnnCell(Seq(wc, bc, wu, bu, wr, br, wy, by)) {
-    override def na: Int = wc.shape.head
-    override def numTrackingStates: Int = 1
-
-    override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
-      case Seq(xt, c0) =>
-        val concat = Variable(ns.concatenate(Seq(c0.data, xt.data)))
-
-        val uGate = sigmoid(wu.dot(concat) + bu)
-        //val rGate = sigmoid(wr.dot(concat) + br)
-        val cTilde = tanh(wc.dot(concat) + bc)
-        // val cTilde = tanh(wc.dot(rGate * concat) + bc)
-        val ct = uGate * cTilde + (1 - uGate) + c0
-        val yHat = softmax(wy.dot(ct) + by)
-
-        Seq(yHat, ct)
-    }
-  }
-
-  object GruCell {
-    def apply(na: Int, nx: Int, ny: Int): GruCell = {
-      val wc = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wc"))
-      val bc = Variable(ns.zeros(na, 1), name = Some("bc"))
-      val wu = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wu"))
-      val bu = Variable(ns.zeros(na, 1), name = Some("bu"))
-      val wr = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wr"))
-      val br = Variable(ns.zeros(na, 1), name = Some("br"))
-      val wy = Variable(ns.randn(ny, na) * 0.01, name = Some("wy"))
-      val by = Variable(ns.zeros(ny, 1), name = Some("by"))
-      GruCell(wc, bc, wu, bu, wr, br, wy, by)
-    }
-  }
-   */
 
   /**
     * Module with vanilla RNN activation.
