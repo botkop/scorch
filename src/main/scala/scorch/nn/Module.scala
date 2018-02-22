@@ -18,7 +18,7 @@ abstract class Module(localParameters: Seq[Variable] = Nil)
    */
   def train(mode: Boolean = true): Unit = {
     this.inTrainingMode = mode
-    subModules().foreach(_.train(mode))
+    subModules.foreach(_.train(mode))
   }
 
   /*
@@ -29,13 +29,20 @@ abstract class Module(localParameters: Seq[Variable] = Nil)
 
   def forward(x: Variable): Variable
   def apply(x: Variable): Variable = forward(x)
-  def subModules(): Seq[Module] = Seq.empty
-  def parameters(): Seq[Variable] =
-    localParameters ++ subModules().flatMap(_.parameters())
+  def subModules: Seq[Module] = Seq.empty
+  def parameters: Seq[Variable] =
+    localParameters ++ subModules.flatMap(_.parameters)
 
   def zeroGrad(): Unit =
-    parameters().map(_.grad).foreach(g => g.data := 0)
+    parameters.map(_.grad).foreach(g => g.data := 0)
+}
 
+abstract class MultiVarModule(localParameters: Seq[Variable] = Nil)
+    extends Module(localParameters) {
+  override def forward(x: Variable): Variable =
+    throw new UnsupportedOperationException("Use forward(xs: Seq[Variable])")
+  def forward(xs: Seq[Variable]): Seq[Variable]
+  def apply(xs: Variable*): Seq[Variable] = forward(xs)
 }
 
 case class Relu() extends Module {

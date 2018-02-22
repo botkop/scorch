@@ -3,8 +3,7 @@ package scorch.examples
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import scorch.autograd._
-import scorch.nn.rnn.RecurrentModule
-import scorch.nn.Optimizer
+import scorch.nn.{MultiVarModule, Optimizer}
 
 import scala.annotation.tailrec
 import scala.io.Source
@@ -38,17 +37,24 @@ object DinosaurIslandCharRnn extends App {
   val EosIndex = charToIx('\n') // index for end of sentence
   val BosIndex = -1 // index for beginning of sentence
 
-  model("gru", examples, charToIx, na = 10, printEvery = 100)
+  model("gru",
+        examples,
+        charToIx,
+        vocabSize = vocabSize,
+        na = 40,
+        maxStringSize = 60,
+        printEvery = 100)
 
   /**
     * Trains the model and generates dinosaur names
-    * @param cellType "rnn" or "lstm"
+    * @param cellType "rnn", "gru" or "lstm"
     * @param examples text corpus
     * @param charToIx dictionary that maps a character to an index
     * @param numIterations number of iterations to train the model for
     * @param na number of units of the RNN cell
     * @param numNames number of dinosaur names you want to sample at each 'printEvery' iteration
     * @param vocabSize number of unique characters found in the text, size of the vocabulary
+    * @param maxStringSize maximum length of the generated string
     * @param printEvery print stats and samples after 'printEvery' iterations
     */
   def model(cellType: String,
@@ -57,7 +63,8 @@ object DinosaurIslandCharRnn extends App {
             numIterations: Int = 35000,
             na: Int = 50,
             numNames: Int = 7,
-            vocabSize: Int = 27,
+            vocabSize: Int,
+            maxStringSize: Int = 50,
             printEvery: Int = 1000): Unit = {
     val (nx, ny) = (vocabSize, vocabSize)
 
@@ -70,7 +77,7 @@ object DinosaurIslandCharRnn extends App {
     }
 
     val optimizer = ClippingSGD(rnn.parameters, maxValue = 5, lr = 0.05)
-    val sampler = Sampler(rnn, charToIx, EosIndex, na)
+    val sampler = Sampler(rnn, charToIx, EosIndex, maxStringSize, na)
 
     var totalLoss = 0.0
     for (j <- 1 to numIterations) {
@@ -109,7 +116,7 @@ object DinosaurIslandCharRnn extends App {
     */
   def rnnForward(xs: List[Int],
                  rnn: BaseRnnCell,
-                 vocabSize: Int = 27): List[Variable] =
+                 vocabSize: Int): List[Variable] =
     xs.foldLeft(List.empty[Variable], rnn.initialTrackingStates) {
         case ((yhs, p0), x) =>
           // one hot encoding of next x
@@ -136,7 +143,7 @@ object DinosaurIslandCharRnn extends App {
                rnn: BaseRnnCell,
                optimizer: Optimizer): Double = {
     optimizer.zeroGrad()
-    val yHat = rnnForward(xs, rnn)
+    val yHat = rnnForward(xs, rnn, vocabSize)
     val loss = rnnLoss(yHat, ys)
     loss.backward()
     optimizer.step()
@@ -148,7 +155,7 @@ object DinosaurIslandCharRnn extends App {
     * and a method for generating the initial states
     * @param vs local parameters of the module
     */
-  abstract class BaseRnnCell(vs: Seq[Variable]) extends RecurrentModule(vs) {
+  abstract class BaseRnnCell(vs: Seq[Variable]) extends MultiVarModule(vs) {
 
     /**
       * Number of units in the cell
@@ -212,7 +219,6 @@ object DinosaurIslandCharRnn extends App {
     override def forward(xs: Seq[Variable]): Seq[Variable] = xs match {
       case Seq(xt, aPrev, cPrev) =>
         val concat = scorch.cat(aPrev, xt)
-        // val concat = Variable(ns.concatenate(Seq(aPrev.data, xt.data)))
 
         // Forget gate
         val ft = sigmoid(wf.dot(concat) + bf)
@@ -252,22 +258,21 @@ object DinosaurIslandCharRnn extends App {
     }
   }
 
-  case class GruCell(
-      wir: Variable,
-      bir: Variable,
-      whr: Variable,
-      bhr: Variable,
-      wiz: Variable,
-      biz: Variable,
-      whz: Variable,
-      bhz: Variable,
-      win: Variable,
-      bin: Variable,
-      whn: Variable,
-      bhn: Variable,
-      wy: Variable,
-      by: Variable
-  ) extends BaseRnnCell(Seq(wir,
+  case class GruCell(wir: Variable,
+                     bir: Variable,
+                     whr: Variable,
+                     bhr: Variable,
+                     wiz: Variable,
+                     biz: Variable,
+                     whz: Variable,
+                     bhz: Variable,
+                     win: Variable,
+                     bin: Variable,
+                     whn: Variable,
+                     bhn: Variable,
+                     wy: Variable,
+                     by: Variable)
+      extends BaseRnnCell(Seq(wir,
                               bir,
                               whr,
                               bhr,
@@ -421,11 +426,13 @@ object DinosaurIslandCharRnn extends App {
     * @param rnn the network module
     * @param charToIx maps characters to indices
     * @param eolIndex index of the end-of-line character
+    * @param maxStringSize maximum length of a generated string
     * @param na number of units of the RNN cell
     */
   case class Sampler(rnn: BaseRnnCell,
                      charToIx: Map[Char, Int],
                      eolIndex: Int,
+                     maxStringSize: Int,
                      na: Int) {
     val vocabSize: Int = charToIx.size
     val ixToChar: Map[Int, Char] = charToIx.map(_.swap)
@@ -452,7 +459,7 @@ object DinosaurIslandCharRnn extends App {
 
     /**
       * Recurse over time-steps t. At each time-step, sample a character from a probability distribution and append
-      * its index to "indices". We'll stop if we reach 50 characters (which should be very unlikely with a well
+      * its index to "indices". We'll stop if we reach maxStringSize characters (which should be very unlikely with a well
       * trained model), which helps debugging and prevents entering an infinite loop.
       * @param t current time step
       * @param prevX previous character
@@ -467,7 +474,7 @@ object DinosaurIslandCharRnn extends App {
                        indices: List[Int] = List.empty): List[Int] =
       if (indices.lastOption.contains(eolIndex)) {
         indices
-      } else if (t >= 50) {
+      } else if (t >= maxStringSize) {
         indices :+ eolIndex
       } else {
         val (nextX, nextIdx, nextP) = generateNextChar(prevX, prev)

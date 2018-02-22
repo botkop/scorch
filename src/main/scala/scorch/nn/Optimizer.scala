@@ -63,5 +63,3 @@ case class Adam(parameters: Seq[Variable],
       t += 1
   }
 }
-
-

@@ -330,3 +330,38 @@ case class SoftmaxLoss(actual: Variable, target: Variable) extends Function {
     actual.backward(Variable(dx))
   }
 }
+
+/**
+  * Computes the cross-entropy loss
+  * @param actuals sequence of yHat variables
+  * @param targets sequence of Y indices (ground truth)
+  */
+case class CrossEntropyLoss(actuals: Seq[Variable], targets: Seq[Int])
+    extends Function {
+
+  /**
+    * Computes the cross entropy loss, and wraps it in a variable.
+    * The variable can be back propped into, to compute the gradients of the parameters
+    * @return the cross entropy loss variable
+    */
+  override def forward(): Variable = {
+    val seqLoss = actuals.zip(targets).foldLeft(0.0) {
+      case (loss, (yht, y)) =>
+        loss - ns.log(yht.data(y, 0)).squeeze()
+    }
+    Variable(Tensor(seqLoss), Some(this))
+  }
+
+  /**
+    * Compute the loss of each generated character, and back prop from last to first
+    * @param gradOutput not used
+    */
+  override def backward(gradOutput: Variable): Unit = {
+    actuals.zip(targets).reverse.foreach {
+      case (yh, y) =>
+        val dy = ns.copy(yh.data)
+        dy(y, 0) -= 1
+        yh.backward(Variable(dy))
+    }
+  }
+}
