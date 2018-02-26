@@ -37,6 +37,12 @@ abstract class Module(localParameters: Seq[Variable] = Nil)
     parameters.map(_.grad).foreach(g => g.data := 0)
 }
 
+/**
+  * Extension of Module, that allows to pass multiple variables in the forward pass
+  * This forward pass also returns multiple variables.
+  * The single parameter forward pass is deactivated.
+  * @param localParameters the trainable parameters of this module
+  */
 abstract class MultiVarModule(localParameters: Seq[Variable] = Nil)
     extends Module(localParameters) {
   override def forward(x: Variable): Variable =

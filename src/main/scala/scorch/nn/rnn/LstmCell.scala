@@ -70,15 +70,18 @@ object LstmCell {
     * @return initialized Lstm cell
     */
   def apply(na: Int, nx: Int, ny: Int): LstmCell = {
-    val wf = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wf"))
+
+    val i = math.sqrt(2.0 / na)
+
+    val wf = Variable(ns.randn(na, na + nx) * i, name = Some("wf"))
     val bf = Variable(ns.zeros(na, 1), name = Some("bf"))
-    val wi = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wi"))
+    val wi = Variable(ns.randn(na, na + nx) * i, name = Some("wi"))
     val bi = Variable(ns.zeros(na, 1), name = Some("bi"))
-    val wc = Variable(ns.randn(na, na + nx) * 0.01, name = Some("wc"))
+    val wc = Variable(ns.randn(na, na + nx) * i, name = Some("wc"))
     val bc = Variable(ns.zeros(na, 1), name = Some("bc"))
-    val wo = Variable(ns.randn(na, na + nx) * 0.01, name = Some("bo"))
+    val wo = Variable(ns.randn(na, na + nx) * i, name = Some("bo"))
     val bo = Variable(ns.zeros(na, 1), name = Some("by"))
-    val wy = Variable(ns.randn(ny, na) * 0.01, name = Some("wy"))
+    val wy = Variable(ns.randn(ny, na) * math.sqrt(2.0 / ny), name = Some("wy"))
     val by = Variable(ns.zeros(ny, 1), name = Some("ba"))
     LstmCell(wf, bf, wi, bi, wc, bc, wo, bo, wy, by)
   }

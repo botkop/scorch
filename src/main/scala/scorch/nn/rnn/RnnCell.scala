@@ -38,9 +38,12 @@ object RnnCell {
     * @return a vanilla Rnn model
     */
   def apply(na: Int, nx: Int, ny: Int): RnnCell = {
-    val wax = Variable(ns.randn(na, nx) * 0.01, name = Some("wax"))
-    val waa = Variable(ns.randn(na, na) * 0.01, name = Some("waa"))
-    val wya = Variable(ns.randn(ny, na) * 0.01, name = Some("wya"))
+
+    val i = math.sqrt(2.0 / na)
+
+    val wax = Variable(ns.randn(na, nx) * i, name = Some("wax"))
+    val waa = Variable(ns.randn(na, na) * i, name = Some("waa"))
+    val wya = Variable(ns.randn(ny, na) * math.sqrt(2.0 / ny), name = Some("wya"))
     val ba = Variable(ns.zeros(na, 1), name = Some("ba"))
     val by = Variable(ns.zeros(ny, 1), name = Some("by"))
     RnnCell(wax, waa, wya, ba, by)

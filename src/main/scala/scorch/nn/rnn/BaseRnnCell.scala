@@ -6,13 +6,13 @@ import scorch.nn.MultiVarModule
 
 /**
   * Extension of MultiVarModule to allow storing the number of previous states
-  * and a method for generating the initial states
+  * and a method for generating initial states
   * @param vs local parameters of the module
   */
 abstract class BaseRnnCell(vs: Seq[Variable]) extends MultiVarModule(vs) {
 
   /**
-    * Number of units in the cell
+    * Dimension of hidden states
     */
   def na: Int
 

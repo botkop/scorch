@@ -38,10 +38,10 @@ class CharModel(corpus: List[String],
   }
 
   val optimizer: Optimizer = optimizerType match {
-    case "sgd"  => SGD(rnn.parameters, learningRate)
-    case "adam" => Adam(rnn.parameters, learningRate)
+    case "sgd"      => SGD(rnn.parameters, learningRate)
+    case "adam"     => Adam(rnn.parameters, learningRate)
     case "nesterov" => Nesterov(rnn.parameters, learningRate)
-    case u      => throw new Error(s"unknown optimizer type $u")
+    case u          => throw new Error(s"unknown optimizer type $u")
   }
 
   val sampler = Sampler(rnn, charToIx, eosIndex, maxSentenceSize)
@@ -88,7 +88,7 @@ class CharModel(corpus: List[String],
   def rnnForward(xs: List[Int]): List[Variable] =
     xs.foldLeft(List.empty[Variable], rnn.initialTrackingStates) {
         case ((yhs, p0), x) =>
-          // one hot encoding of next x
+          // one hot encoding of x
           val xt = Variable(ns.zeros(vocabSize, 1))
           if (x != bosIndex)
             xt.data(x, 0) := 1
@@ -131,9 +131,10 @@ object CharModel {
 
   def main(args: Array[String]): Unit = {
     // val fname = args.head
-     val fname = "src/test/resources/sonnets-cleaned.txt"
-//    val fname = "src/test/resources/dinos.txt"
-    CharModel(fname, learningRate = 0.001).run()
+//     val fname = "src/test/resources/sonnets-cleaned.txt"
+    val fname = "src/test/resources/dinos.txt"
+    CharModel(fname, learningRate = 0.001, cellType = "lstm", printEvery = 1000)
+      .run()
   }
 
 }

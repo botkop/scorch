@@ -9,6 +9,7 @@ import scorch.TestUtil._
 import scorch.autograd._
 import scorch.nn._
 
+import scala.io.Source
 import scala.language.postfixOps
 
 class WordEmbeddingSpec extends FlatSpec with Matchers {
@@ -113,11 +114,11 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
         out2
       }
 
-      override def subModules(): Seq[Module] = Seq(embeddings, linear1, linear2)
+      override def subModules: Seq[Module] = Seq(embeddings, linear1, linear2)
     }
 
     val model = NGramLanguageModeler(vocab.length, embeddingDim, contextSize)
-    val optimizer = SGD(model.parameters(), lr = 0.1)
+    val optimizer = SGD(model.parameters, lr = 0.1)
 
     var totalLoss = 0.0
 
@@ -144,7 +145,7 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
       println(s"$epoch: $totalLoss")
     }
 
-    assert (totalLoss < 20)
+    assert(totalLoss < 20)
 
     val ctxi = Array("dig", "deep").map(wordToIx)
     val ctxv = Variable(Tensor(ctxi))
@@ -153,6 +154,75 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
     println(w)
 
     assert(w == "trenches")
+  }
+
+  it should "build an rnn based language model" in {
+    val contextSize = 2
+    val embeddingDim = 10
+    val corpus = Source
+      .fromFile("src/test/resources/sonnets-cleaned.txt")
+      .getLines()
+      .map { s =>
+        s.replaceAll("[\\.',;:\\-]+", "")
+          .toLowerCase()
+          .split("\\s+")
+          .toSeq
+      }
+      .toSeq
+
+    val eos = "<EOS>"
+    val vocab = corpus.flatten.distinct.sorted :+ eos
+    val wordToIx = vocab.zipWithIndex.toMap.mapValues(_.toDouble)
+
+    def encode(word: String): Variable = Variable(Tensor(wordToIx(word)))
+    def encodeSentence(sentence: Seq[String]): Seq[Variable] = sentence.map(w => encode(w))
+
+    case class WordModel(vocabSize: Int, embeddingDim: Int)
+        extends MultiVarModule {
+      val embeddings = WordEmbedding(vocabSize, embeddingDim)
+      val rnn = GruCell(50, vocabSize, vocabSize)
+
+      def forwardSentence(sentence: Seq[String]): Seq[Variable] = {
+        forward(encodeSentence(sentence))
+      }
+
+      override def forward(xs: Seq[Variable]): Seq[Variable] =
+        xs.foldLeft(List.empty[Variable], rnn.initialTrackingStates) {
+            case ((yhs, p0), x) =>
+println(p0.head.shape)
+              val embeds = embeddings(x).reshape(1, embeddingDim)
+              val next = rnn(embeds +: p0: _*)
+              val (yht, p1) = (next.head, next.tail)
+              (yhs :+ yht, p1)
+          }
+          ._1
+
+      override def subModules: Seq[Module] = Seq(embeddings, rnn)
+
+    }
+
+    val model = WordModel(vocab.length, embeddingDim)
+    val optimizer = SGD(model.parameters, lr = 0.1)
+
+    var totalLoss = 0.0
+    for (epoch <- 1 to 10) {
+      totalLoss = 0
+
+      for (sentence<- corpus) {
+        model.zeroGrad()
+
+        val output = model.forwardSentence(sentence)
+
+//        val target = Variable(Tensor(wordToIx(tri.last)))
+//        val loss: Variable = softmaxLoss(output, target)
+//        totalLoss += loss.data.squeeze()
+
+//        loss.backward()
+//        optimizer.step()
+      }
+
+      println(s"$epoch: $totalLoss")
+    }
   }
 
 }
