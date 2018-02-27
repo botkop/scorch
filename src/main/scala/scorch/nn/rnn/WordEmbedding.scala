@@ -13,6 +13,12 @@ case class WordEmbedding(w: Variable) extends Module(Seq(w)) {
 }
 
 object WordEmbedding {
+  /**
+    * Initialize by dimension
+    * @param v vocabulary size
+    * @param d size for each word
+    * @return word embedding of shape(v, d)
+    */
   def apply(v: Int, d: Int): WordEmbedding = {
     val w = ns.randn(v, d)
     WordEmbedding(Variable(w))

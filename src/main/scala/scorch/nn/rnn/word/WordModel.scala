@@ -1,16 +1,16 @@
-package scorch.nn.rnn.char
+package scorch.nn.rnn.word
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.{Adam, Optimizer, SGD}
 import scorch.nn.rnn.{BaseRnnCell, GruCell, LstmCell, RnnCell}
-import scorch.nn._
+import scorch.nn.{Adam, Optimizer, SGD, _}
 
 import scala.io.Source
 import scala.util.Random
 
-class CharModel(corpus: List[String],
-                eosChar: Char = '\n',
+class WordModel(corpus: Seq[String],
+                tokenizer: (String) => Seq[String],
+                eosSymbol: String = "<EOS>",
                 cellType: String = "gru",
                 optimizerType: String = "adam",
                 learningRate: Double = 0.06,
@@ -21,12 +21,14 @@ class CharModel(corpus: List[String],
                 printEvery: Int = 100,
 ) {
 
-  val chars: Array[Char] =
-    corpus.mkString.toCharArray.distinct.sorted :+ eosChar
-  val vocabSize: Int = chars.length
-  val charToIx: Map[Char, Int] = chars.zipWithIndex.toMap
+  val tokens: Seq[String] =
+    tokenizer(corpus.mkString(" ")).distinct.sorted :+ eosSymbol
+
+  val vocabSize: Int = tokens.length
+  val tokenToIdx: Map[String, Int] = tokens.zipWithIndex.toMap
+
   val bosIndex: Int = -1 // index for beginning of sentence
-  val eosIndex: Int = charToIx(eosChar) // index for end of sentence
+  val eosIndex: Int = tokenToIdx(eosSymbol) // index for end of sentence
   val (nx, ny) = (vocabSize, vocabSize)
 
   // define the RNN model
@@ -44,21 +46,23 @@ class CharModel(corpus: List[String],
     case u          => throw new Error(s"unknown optimizer type $u")
   }
 
-  val sampler = Sampler(rnn, charToIx, eosIndex, maxSentenceSize)
+  val sampler = WordSampler(rnn, tokenToIdx, eosIndex, maxSentenceSize)
 
   def run(): Unit = {
     var totalLoss = 0.0
     for (j <- 1 to numIterations) {
       val index = j % corpus.length
-      val xs: List[Int] = bosIndex +: corpus(index).map(charToIx).toList
-      val ys: List[Int] = xs.tail :+ eosIndex
+
+      val xs: Seq[Int] = bosIndex +: tokenizer(corpus(index)).map(tokenToIdx)
+      val ys: Seq[Int] = xs.tail :+ eosIndex
 
       val loss = optimize(xs, ys)
       totalLoss += loss
 
       if (j % printEvery == 0) {
         println(s"Iteration: $j, Loss: ${totalLoss / printEvery}")
-        (1 to numSentences).foreach(_ => print(sampler.sample))
+        (1 to numSentences).foreach(_ =>
+          println(sampler.sample((ls: Seq[String]) => ls.mkString(" "))))
         println()
         totalLoss = 0.0
       }
@@ -67,11 +71,11 @@ class CharModel(corpus: List[String],
 
   /**
     * Execute one step of the optimization to train the model
-    * @param xs list of integers, where each integer is a number that maps to a character in the vocabulary
+    * @param xs list of integers, where each integer is a number that maps to a token in the vocabulary
     * @param ys list of integers, exactly the same as xs but shifted one index to the left
     * @return the value of the loss function (cross-entropy)
     */
-  def optimize(xs: List[Int], ys: List[Int]): Double = {
+  def optimize(xs: Seq[Int], ys: Seq[Int]): Double = {
     optimizer.zeroGrad()
     val yHat = rnnForward(xs)
     val loss = crossEntropyLoss(yHat, ys)
@@ -82,10 +86,10 @@ class CharModel(corpus: List[String],
 
   /**
     * Performs the forward propagation through the RNN
-    * @param xs sequence of input characters to activate
+    * @param xs sequence of input tokens to activate
     * @return predictions of the RNN over xs
     */
-  def rnnForward(xs: List[Int]): List[Variable] =
+  def rnnForward(xs: Seq[Int]): Seq[Variable] =
     xs.foldLeft(List.empty[Variable], rnn.initialTrackingStates) {
         case ((yhs, p0), x) =>
           // one hot encoding of x
@@ -101,9 +105,10 @@ class CharModel(corpus: List[String],
 
 }
 
-object CharModel {
+object WordModel {
   def apply(fileName: String,
-            eosChar: Char = '\n',
+            tokenizer: (String) => Seq[String] = (s) => s.split("\\s+"),
+            eosSymbol: String = "<EOS>",
             cellType: String = "gru",
             optimizerType: String = "adam",
             learningRate: Double = 0.06,
@@ -111,14 +116,16 @@ object CharModel {
             numIterations: Int = Int.MaxValue,
             maxSentenceSize: Int = 60,
             numSentences: Int = 8,
-            printEvery: Int = 100): CharModel = {
+            printEvery: Int = 100,
+  ): WordModel = {
     val corpus = Random.shuffle(
       Source
         .fromFile(fileName)
         .getLines()
         .toList)
-    new CharModel(corpus,
-                  eosChar,
+    new WordModel(corpus,
+                  tokenizer,
+                  eosSymbol,
                   cellType,
                   optimizerType,
                   learningRate,
@@ -130,10 +137,16 @@ object CharModel {
   }
 
   def main(args: Array[String]): Unit = {
-//     val fname = args.head
-//     val fname = "src/test/resources/sonnets-cleaned.txt"
-    val fname = "src/test/resources/dinos.txt"
-    CharModel(fname, learningRate = 0.001, cellType = "lstm", printEvery = 1000)
+    //     val fname = args.head
+    val fname = "src/test/resources/sonnets-cleaned.txt"
+    WordModel(fname,
+              tokenizer = (s) =>
+                s.toLowerCase
+                  .replaceAll("[\\.',;:\\-!\\?\\(]+", " ")
+                  .split("\\s+")
+                  .filterNot(_.isEmpty),
+              learningRate = 0.001,
+              printEvery = 1000)
       .run()
   }
 
