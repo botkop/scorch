@@ -1,4 +1,4 @@
-package scorch.nn.rnn
+package scorch.sandbox.rnn
 
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
@@ -8,8 +8,8 @@ import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
 import scorch.nn._
+import scorch._
 
-import scala.io.Source
 import scala.language.postfixOps
 
 class WordEmbeddingSpec extends FlatSpec with Matchers {

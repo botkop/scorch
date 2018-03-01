@@ -1,7 +1,8 @@
 package scorch.nn.rnn
 
 import botkop.{numsca => ns}
-import scorch.autograd.{Variable, sigmoid, softmax, tanh}
+import scorch.autograd.Variable
+import scorch._
 
 /**
   * Implements a single forward step of the LSTM-cell
@@ -27,7 +28,7 @@ case class LstmCell(
     bo: Variable,
     wy: Variable,
     by: Variable
-) extends BaseRnnCell(Seq(wf, bf, wi, bi, wc, bc, wo, bo, wy, by)) {
+) extends RnnCellBase(Seq(wf, bf, wi, bi, wc, bc, wo, bo, wy, by)) {
   override val na: Int = wy.shape.last
   override val numTrackingStates: Int = 2
 

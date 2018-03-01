@@ -1,7 +1,8 @@
 package scorch.nn.rnn
 
 import botkop.{numsca => ns}
-import scorch.autograd.{Variable, softmax, tanh}
+import scorch.autograd.Variable
+import scorch._
 
 /**
   * Module with vanilla RNN activation.
@@ -16,7 +17,7 @@ case class RnnCell(wax: Variable,
                    wya: Variable,
                    ba: Variable,
                    by: Variable)
-    extends BaseRnnCell(Seq(wax, waa, wya, ba, by)) {
+    extends RnnCellBase(Seq(wax, waa, wya, ba, by)) {
 
   override val na: Int = wax.shape.head
   override val numTrackingStates: Int = 1

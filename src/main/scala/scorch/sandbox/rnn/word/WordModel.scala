@@ -1,9 +1,10 @@
-package scorch.nn.rnn.word
+package scorch.sandbox.rnn.word
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.rnn.{BaseRnnCell, GruCell, LstmCell, RnnCell}
+import scorch.nn.rnn.{RnnCellBase, GruCell, LstmCell, RnnCell}
 import scorch.nn.{Adam, Optimizer, SGD, _}
+import scorch._
 
 import scala.io.Source
 import scala.util.Random
@@ -32,7 +33,7 @@ class WordModel(corpus: Seq[String],
   val (nx, ny) = (vocabSize, vocabSize)
 
   // define the RNN model
-  val rnn: BaseRnnCell = cellType match {
+  val rnn: RnnCellBase = cellType match {
     case "rnn"  => RnnCell(na, nx, ny)
     case "lstm" => LstmCell(na, nx, ny)
     case "gru"  => GruCell(na, nx, ny)

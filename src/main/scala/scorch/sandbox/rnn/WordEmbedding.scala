@@ -1,4 +1,4 @@
-package scorch.nn.rnn
+package scorch.sandbox.rnn
 
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}

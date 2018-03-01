@@ -1,7 +1,8 @@
-package scorch.nn.rnn
+package scorch.sandbox.rnn
 
 import botkop.numsca.:>
 import botkop.{numsca => ns}
+import scorch._
 import scorch.autograd._
 import scorch.nn.Module
 

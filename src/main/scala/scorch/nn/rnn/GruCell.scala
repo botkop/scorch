@@ -1,7 +1,8 @@
 package scorch.nn.rnn
 
 import botkop.{numsca => ns}
-import scorch.autograd.{Variable, sigmoid, softmax, tanh}
+import scorch.autograd.Variable
+import scorch._
 
 case class GruCell(wir: Variable,
                    bir: Variable,
@@ -17,7 +18,7 @@ case class GruCell(wir: Variable,
                    bhn: Variable,
                    wy: Variable,
                    by: Variable)
-    extends BaseRnnCell(
+    extends RnnCellBase(
       Seq(wir, bir, whr, bhr, wiz, biz, whz, bhz, win, bin, whn, bhn, wy, by)) {
   override val na: Int = wir.shape.head
   override val numTrackingStates: Int = 1

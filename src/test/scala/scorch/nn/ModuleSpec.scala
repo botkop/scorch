@@ -3,7 +3,7 @@ package scorch.nn
 import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd.Variable
-import scorch.nn
+import scorch._
 
 import scala.util.Random
 
@@ -38,11 +38,11 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
 
-    val loss = nn.softmaxLoss(out, target)
+    val loss = softmaxLoss(out, target)
 
     loss.backward()
 
-    fc.parameters().foreach { p =>
+    fc.parameters.foreach { p =>
       println(p.data.shape.toList)
       println(p.grad.data.shape.toList)
       p.data.shape shouldBe p.grad.data.shape
@@ -66,13 +66,13 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules(): Seq[Module] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+      override def subModules: Seq[Module] = Seq(fc1, fc2)
+      override def forward(x: Variable): Variable = fc2(relu(fc1(x)))
     }
 
     val n = Net()
 
-    val optimizer = SGD(n.parameters(), lr = 1)
+    val optimizer = SGD(n.parameters, lr = 1)
 
     val input = Variable(ns.randn(numSamples, nf1))
 
@@ -81,7 +81,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmaxLoss(output, target)
+      val loss = softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -94,7 +94,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     val output = n(input)
-    val loss = nn.softmaxLoss(output, target)
+    val loss = softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 
@@ -116,13 +116,13 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules(): Seq[Module] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+      override def subModules: Seq[Module] = Seq(fc1, fc2)
+      override def forward(x: Variable): Variable = fc2(relu(fc1(x)))
     }
 
     val n = Net()
 
-    val optimizer = Adam(n.parameters(), lr = 0.01)
+    val optimizer = Adam(n.parameters, lr = 0.01)
 
     val input = Variable(ns.randn(numSamples, nf1))
 
@@ -131,7 +131,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmaxLoss(output, target)
+      val loss = softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -144,7 +144,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     val output = n(input)
-    val loss = nn.softmaxLoss(output, target)
+    val loss = softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 
@@ -166,13 +166,13 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules(): Seq[Module] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
+      override def subModules: Seq[Module] = Seq(fc1, fc2)
+      override def forward(x: Variable): Variable = fc2(relu(fc1(x)))
     }
 
     val n = Net()
 
-    val optimizer = Nesterov(n.parameters(), lr = 0.01)
+    val optimizer = Nesterov(n.parameters, lr = 0.01)
 
     val input = Variable(ns.randn(numSamples, nf1))
 
@@ -181,7 +181,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmaxLoss(output, target)
+      val loss = softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -194,7 +194,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     }
 
     val output = n(input)
-    val loss = nn.softmaxLoss(output, target)
+    val loss = softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 
@@ -218,7 +218,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       val fc2 = Linear(nf2, numClasses)
       val dropout = Dropout(p = 0.9)
 
-      override def subModules(): Seq[Module] = Seq(fc1, fc2, dropout)
+      override def subModules: Seq[Module] = Seq(fc1, fc2, dropout)
 
       override def forward(x: Variable): Variable = fc2(relu(dropout(fc1(x))))
     }
@@ -226,7 +226,7 @@ class ModuleSpec extends FlatSpec with Matchers {
     val n = Net()
     n.train()
 
-    val optimizer = SGD(n.parameters(), lr = 0.1)
+    val optimizer = SGD(n.parameters, lr = 0.1)
 
     val input = Variable(ns.randn(numSamples, nf1))
 
@@ -235,7 +235,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.zeroGrad()
 
       val output = n(input)
-      val loss = nn.softmaxLoss(output, target)
+      val loss = softmaxLoss(output, target)
 
       if (j % 100 == 0) {
         val guessed = ns.argmax(output.data, axis = 1)
@@ -249,7 +249,7 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     n.eval()
     val output = n(input)
-    val loss = nn.softmaxLoss(output, target)
+    val loss = softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
     val accuracy = ns.sum(target.data == guessed) / numSamples
 

@@ -1,7 +1,8 @@
-package scorch.examples
+package scorch.sandbox.rnn
 
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
+import scorch._
 import scorch.autograd._
 import scorch.nn.{MultiVarModule, Optimizer}
 

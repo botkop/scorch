@@ -1,8 +1,8 @@
-package scorch.nn.rnn.word
+package scorch.sandbox.rnn.word
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.rnn.BaseRnnCell
+import scorch.nn.rnn.RnnCellBase
 
 import scala.annotation.tailrec
 
@@ -13,7 +13,7 @@ import scala.annotation.tailrec
   * @param eolIndex index of the end-of-sentence token
   * @param maxStringSize maximum length of a generated string
   */
-case class WordSampler(rnn: BaseRnnCell,
+case class WordSampler(rnn: RnnCellBase,
                        tokenToIx: Map[String, Int],
                        eolIndex: Int,
                        maxStringSize: Int) {

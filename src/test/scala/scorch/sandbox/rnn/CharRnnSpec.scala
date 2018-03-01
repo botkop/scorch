@@ -1,4 +1,4 @@
-package scorch.nn.rnn
+package scorch.sandbox.rnn
 
 import java.io.File
 
@@ -9,6 +9,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd._
 import scorch.nn._
+import scorch._
 
 import scala.io.Source
 import scala.language.postfixOps
@@ -23,7 +24,7 @@ class CharRnnSpec extends FlatSpec with Matchers {
   // this is really slow, and does not seem to work
   // so the test is tagged as ignored
 
-  "A Char-RNN" should "classify names" in {
+  "A Char-RNN" should "classify names" ignore {
 
     def getListOfFiles(dir: String): List[File] = {
       val d = new File(dir)

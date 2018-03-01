@@ -1,4 +1,4 @@
-package scorch.nn.rnn
+package scorch.sandbox.rnn
 
 import botkop.{numsca => ns}
 import org.nd4j.linalg.api.buffer.DataBuffer
@@ -7,6 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
 import scorch.nn.Module
+import scorch.sandbox.rnn
 
 class TemporalAffineSpec extends FlatSpec with Matchers {
 
@@ -20,9 +21,9 @@ class TemporalAffineSpec extends FlatSpec with Matchers {
     val w = Variable(ns.randn(d, m))
     val b = Variable(ns.randn(m, 1))
 
-    def fx(a: Variable): Variable = TemporalAffineFunction(a, w, b).forward()
-    def fw(a: Variable): Variable = TemporalAffineFunction(x, a, b).forward()
-    def fb(a: Variable): Variable = TemporalAffineFunction(x, w, a).forward()
+    def fx(a: Variable): Variable = rnn.TemporalAffineFunction(a, w, b).forward()
+    def fw(a: Variable): Variable = rnn.TemporalAffineFunction(x, a, b).forward()
+    def fb(a: Variable): Variable = rnn.TemporalAffineFunction(x, w, a).forward()
 
     oneOpGradientCheck(fx, Variable(x.data))
     oneOpGradientCheck(fw, Variable(w.data))
@@ -35,7 +36,7 @@ class TemporalAffineSpec extends FlatSpec with Matchers {
 
 case class TemporalAffine(w: Variable, b: Variable) extends Module(Seq(w, b)) {
   override def forward(x: Variable): Variable =
-    TemporalAffineFunction(x, w, b).forward()
+    rnn.TemporalAffineFunction(x, w, b).forward()
 }
 
 case class TemporalAffineFunction(x: Variable, w: Variable, b: Variable)

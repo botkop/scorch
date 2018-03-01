@@ -4,6 +4,7 @@ import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import org.scalactic.{Equality, TolerantNumerics}
 import org.scalatest.{FlatSpec, Matchers}
+import scorch._
 
 class AutoGradSpec extends FlatSpec with Matchers {
 

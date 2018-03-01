@@ -1,8 +1,8 @@
-package scorch.nn.rnn.char
+package scorch.sandbox.rnn.char
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.rnn.BaseRnnCell
+import scorch.nn.rnn.RnnCellBase
 
 import scala.annotation.tailrec
 
@@ -13,7 +13,7 @@ import scala.annotation.tailrec
   * @param eolIndex index of the end-of-line character
   * @param maxStringSize maximum length of a generated string
   */
-case class Sampler(rnn: BaseRnnCell,
+case class Sampler(rnn: RnnCellBase,
                    charToIx: Map[Char, Int],
                    eolIndex: Int,
                    maxStringSize: Int) {

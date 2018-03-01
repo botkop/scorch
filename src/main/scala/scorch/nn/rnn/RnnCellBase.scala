@@ -9,7 +9,7 @@ import scorch.nn.MultiVarModule
   * and a method for generating initial states
   * @param vs local parameters of the module
   */
-abstract class BaseRnnCell(vs: Seq[Variable]) extends MultiVarModule(vs) {
+abstract class RnnCellBase(vs: Seq[Variable]) extends MultiVarModule(vs) {
 
   /**
     * Dimension of hidden states
