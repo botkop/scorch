@@ -2,9 +2,9 @@ package scorch.sandbox.rnn.word
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.rnn.{RnnCellBase, GruCell, LstmCell, RnnCell}
-import scorch.nn.{Adam, Optimizer, SGD, _}
+import scorch.nn.rnn.{GruCell, LstmCell, RnnCell, RnnCellBase}
 import scorch._
+import scorch.optim.{Adam, Nesterov, Optimizer, SGD}
 
 import scala.io.Source
 import scala.util.Random

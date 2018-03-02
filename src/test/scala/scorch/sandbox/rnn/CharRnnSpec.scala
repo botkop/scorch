@@ -10,6 +10,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd._
 import scorch.nn._
 import scorch._
+import scorch.optim.{Optimizer, SGD}
 
 import scala.io.Source
 import scala.language.postfixOps

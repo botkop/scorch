@@ -4,6 +4,7 @@ import botkop.{numsca => ns}
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd.Variable
 import scorch._
+import scorch.optim.{Adam, Nesterov, SGD}
 
 import scala.util.Random
 

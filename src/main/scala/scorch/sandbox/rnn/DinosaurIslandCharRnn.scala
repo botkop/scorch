@@ -4,7 +4,8 @@ import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import scorch._
 import scorch.autograd._
-import scorch.nn.{MultiVarModule, Optimizer}
+import scorch.nn.MultiVarModule
+import scorch.optim.Optimizer
 
 import scala.annotation.tailrec
 import scala.io.Source
