@@ -2,7 +2,7 @@ package scorch.sandbox.rnn.char
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.rnn.{GruCell, LstmCell, RnnCell, RnnCellBase}
+import scorch.nn.rnn._
 import scorch._
 import scorch.optim.{Adam, Nesterov, Optimizer, SGD}
 
@@ -30,12 +30,7 @@ class CharModel(corpus: List[String],
   val (nx, ny) = (vocabSize, vocabSize)
 
   // define the RNN model
-  val rnn: RnnCellBase = cellType match {
-    case "rnn"  => RnnCell(na, nx, ny)
-    case "lstm" => LstmCell(na, nx, ny)
-    case "gru"  => GruCell(na, nx, ny)
-    case u      => throw new Error(s"unknown cell type $u")
-  }
+  val rnn = RnnBase(cellType, na, nx, ny)
 
   val optimizer: Optimizer = optimizerType match {
     case "sgd"      => SGD(rnn.parameters, learningRate)
@@ -44,7 +39,7 @@ class CharModel(corpus: List[String],
     case u          => throw new Error(s"unknown optimizer type $u")
   }
 
-  val sampler = Sampler(rnn, charToIx, eosIndex, maxSentenceSize)
+  val sampler = CharSampler(rnn.cell, charToIx, eosIndex, maxSentenceSize)
 
   def run(): Unit = {
     var totalLoss = 0.0
@@ -67,38 +62,26 @@ class CharModel(corpus: List[String],
 
   /**
     * Execute one step of the optimization to train the model
+    *
     * @param xs list of integers, where each integer is a number that maps to a character in the vocabulary
     * @param ys list of integers, exactly the same as xs but shifted one index to the left
     * @return the value of the loss function (cross-entropy)
     */
   def optimize(xs: List[Int], ys: List[Int]): Double = {
     optimizer.zeroGrad()
-    val yHat = rnnForward(xs)
+    val yHat = rnn.forward(xs.map(onehot))
     val loss = crossEntropyLoss(yHat, ys)
     loss.backward()
     optimizer.step()
     loss.data.squeeze()
   }
 
-  /**
-    * Performs the forward propagation through the RNN
-    * @param xs sequence of input characters to activate
-    * @return predictions of the RNN over xs
-    */
-  def rnnForward(xs: List[Int]): List[Variable] =
-    xs.foldLeft(List.empty[Variable], rnn.initialTrackingStates) {
-        case ((yhs, p0), x) =>
-          // one hot encoding of x
-          val xt = Variable(ns.zeros(vocabSize, 1))
-          if (x != bosIndex)
-            xt.data(x, 0) := 1
-
-          val next = rnn(xt +: p0: _*)
-          val (yht, p1) = (next.head, next.tail)
-          (yhs :+ yht, p1)
-      }
-      ._1
-
+  def onehot(x: Int): Variable = {
+    val xt = Variable(ns.zeros(vocabSize, 1))
+    if (x != bosIndex)
+      xt.data(x, 0) := 1
+    xt
+  }
 }
 
 object CharModel {

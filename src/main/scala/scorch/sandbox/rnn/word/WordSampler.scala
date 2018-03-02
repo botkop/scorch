@@ -67,7 +67,6 @@ case class WordSampler(rnn: RnnCellBase,
     val x0 = Variable(ns.zeros(vocabSize, 1))
     val p0 = rnn.initialTrackingStates
     val sampledIndices = generate(1, x0, p0)
-    // sampledIndices.map(ixToToken).mkString
     join(sampledIndices.init.map(ixToToken))
   }
 }

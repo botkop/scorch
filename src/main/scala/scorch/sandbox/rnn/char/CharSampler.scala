@@ -8,15 +8,15 @@ import scala.annotation.tailrec
 
 /**
   * Sample a sequence of characters according to a sequence of probability distributions output of the RNN
-  * @param rnn the network module
+  * @param rnnCell the network module
   * @param charToIx maps characters to indices
   * @param eolIndex index of the end-of-line character
   * @param maxStringSize maximum length of a generated string
   */
-case class Sampler(rnn: RnnCellBase,
-                   charToIx: Map[Char, Int],
-                   eolIndex: Int,
-                   maxStringSize: Int) {
+case class CharSampler(rnnCell: RnnCellBase,
+                       charToIx: Map[Char, Int],
+                       eolIndex: Int,
+                       maxStringSize: Int) {
   val vocabSize: Int = charToIx.size
   val ixToChar: Map[Int, Char] = charToIx.map(_.swap)
 
@@ -28,8 +28,8 @@ case class Sampler(rnn: RnnCellBase,
     */
   def generateNextChar(xPrev: Variable,
                        pPrev: Seq[Variable]): (Variable, Int, Seq[Variable]) = {
-    // Forward propagate x
-    val next = rnn(xPrev +: pPrev: _*)
+    // Forward propagate X
+    val next = rnnCell(xPrev +: pPrev: _*)
     val (yHat, pNext) = (next.head, next.tail)
     // Sample the index of a character within the vocabulary from the probability distribution y
     val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
@@ -65,7 +65,7 @@ case class Sampler(rnn: RnnCellBase,
 
   def sample: String = {
     val x0 = Variable(ns.zeros(vocabSize, 1))
-    val p0 = rnn.initialTrackingStates
+    val p0 = rnnCell.initialTrackingStates
     val sampledIndices = generate(1, x0, p0)
     sampledIndices.map(ixToChar).mkString
   }

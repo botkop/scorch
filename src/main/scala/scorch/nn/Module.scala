@@ -51,6 +51,17 @@ abstract class MultiVarModule(localParameters: Seq[Variable] = Nil)
   def apply(xs: Variable*): Seq[Variable] = forward(xs)
 }
 
+// proposal for a new structure
+/*
+abstract class SimpleModule(localParameters: Seq[Variable]) extends MultiVarModule(localParameters = localParameters)
+{
+  override def forward(x: Variable): Variable = super.forward(Seq(x)).head
+}
+*/
+
+
+
+
 case class Relu() extends Module {
   override def forward(x: Variable): Variable = Threshold(x, 0).forward()
 }
