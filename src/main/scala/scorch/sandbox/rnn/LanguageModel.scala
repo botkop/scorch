@@ -1,6 +1,7 @@
 package scorch.sandbox.rnn
 
 import botkop.{numsca => ns}
+import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 import scorch.crossEntropyLoss
 import scorch.nn.rnn.RnnBase
@@ -23,11 +24,12 @@ class LanguageModel[T](
     maxSentenceSize: Int = 60,
     numSentences: Int = 8,
     printEvery: Int = 100,
-) {
+)(implicit ordering: Ordering[T])
+    extends LazyLogging {
 
-  // todo add sorting
   val tokens: Seq[T] =
-    corpus.flatMap(tokenize).distinct :+ eosSymbol
+    corpus.flatMap(tokenize).distinct.sorted :+ eosSymbol
+
 
   val vocabSize: Int = tokens.length
   val tokenToIdx: Map[T, Int] = tokens.zipWithIndex.toMap
@@ -35,6 +37,10 @@ class LanguageModel[T](
   val bosIndex: Int = -1 // index for beginning of sentence
   val eosIndex: Int = tokenToIdx(eosSymbol) // index for end of sentence
   val (nx, ny) = (vocabSize, vocabSize)
+
+  logger.info(s"corpus size: ${corpus.length}")
+  logger.info(s"vocab size: $vocabSize")
+  logger.info(s"vocabulary: $tokens")
 
   // define the RNN model
   val rnn = RnnBase(cellType, na, nx, ny)
@@ -87,7 +93,7 @@ class LanguageModel[T](
     def generateToken(xPrev: Variable,
                       pPrev: Seq[Variable]): (Variable, Int, Seq[Variable]) = {
       // Forward propagate x
-      val next = rnn(xPrev +: pPrev: _*)
+      val next = rnn.cell(xPrev +: pPrev: _*)
       val (yHat, pNext) = (next.head, next.tail)
       // Sample the index of a token within the vocabulary from the probability distribution y
       val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
@@ -117,9 +123,8 @@ class LanguageModel[T](
 }
 
 object CharModel extends App {
-
   def tokenize(s: String): Array[Char] = s.toCharArray
-  def join(s: Seq[Char]) = s.toString
+  def join(s: Seq[Char]) = s.mkString
   val fileName = "src/test/resources/dinos.txt"
   val corpus = Random.shuffle(
     Source
@@ -131,7 +136,31 @@ object CharModel extends App {
                                 tokenize = tokenize,
                                 join = join,
                                 eosSymbol = '\n')
+  model.run()
+}
 
+object WordModel extends App {
+  def tokenize(s: String): Array[String] =
+    s.toLowerCase
+      .replaceAll("[\\.',;:\\-!\\?\\(]+", " ")
+      .split("\\s+")
+      .filterNot(_.isEmpty)
+
+  def join(s: Seq[String]) = s.mkString(" ")
+  val fileName = "src/test/resources/sonnets-cleaned.txt"
+  val corpus = Random.shuffle(
+    Source
+      .fromFile(fileName)
+      .getLines()
+      .toList)
+
+  val model = new LanguageModel(corpus = corpus,
+                                tokenize = tokenize,
+                                join = join,
+                                learningRate = 0.003,
+                                cellType = "lstm",
+                                printEvery = 1000,
+                                eosSymbol = "<EOS>")
   model.run()
 
 }
