@@ -30,7 +30,6 @@ class LanguageModel[T](
   val tokens: Seq[T] =
     corpus.flatMap(tokenize).distinct.sorted :+ eosSymbol
 
-
   val vocabSize: Int = tokens.length
   val tokenToIdx: Map[T, Int] = tokens.zipWithIndex.toMap
 
@@ -52,6 +51,13 @@ class LanguageModel[T](
     case u          => throw new Error(s"unknown optimizer type $u")
   }
 
+  /**
+    * Execute one step of the optimization to train the model
+    *
+    * @param xs list of integers, where each integer is a number that maps to a character in the vocabulary
+    * @param ys list of integers, exactly the same as xs but shifted one index to the left
+    * @return the value of the loss function (cross-entropy)
+    */
   def optimize(xs: Seq[Int], ys: Seq[Int]): Double = {
     optimizer.zeroGrad()
     val yHat = rnn.forward(xs.map(encode))
@@ -74,50 +80,29 @@ class LanguageModel[T](
 
       if (j % printEvery == 0) {
         println(s"Iteration: $j, Loss: ${totalLoss / printEvery}")
-        (1 to numSentences).foreach(_ => println(sample))
+        for (_ <- 1 to numSentences) {
+          val sampledIndices =
+            rnn.sample(encode, bosIndex, eosIndex, maxSentenceSize)
+          val sentence = join(sampledIndices.init.map(tokens))
+          println(sentence)
+        }
+
         println()
         totalLoss = 0.0
       }
     }
   }
 
+  /**
+    * one hot encoding within vocabSize
+    * @param x index to encode
+    * @return one hot encoded index
+    */
   def encode(x: Int): Variable = {
     val xt = Variable(ns.zeros(vocabSize, 1))
     if (x != bosIndex)
       xt.data(x, 0) := 1
     xt
-  }
-
-  def sample: String = {
-
-    def generateToken(xPrev: Variable,
-                      pPrev: Seq[Variable]): (Variable, Int, Seq[Variable]) = {
-      // Forward propagate x
-      val next = rnn.cell(xPrev +: pPrev: _*)
-      val (yHat, pNext) = (next.head, next.tail)
-      // Sample the index of a token within the vocabulary from the probability distribution y
-      val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt
-      // encoding of the next index
-      val xNext = encode(nextIdx)
-      (xNext, nextIdx, pNext)
-    }
-
-    @tailrec
-    def generateSequence(t: Int = 1,
-                         prevX: Variable = Variable(ns.zeros(vocabSize, 1)),
-                         prev: Seq[Variable] = rnn.cell.initialTrackingStates,
-                         indices: List[Int] = List.empty): List[Int] =
-      if (indices.lastOption.contains(eosIndex)) {
-        indices
-      } else if (t >= maxSentenceSize) {
-        indices :+ eosIndex
-      } else {
-        val (nextX, nextIdx, nextP) = generateToken(prevX, prev)
-        generateSequence(t + 1, nextX, nextP, indices :+ nextIdx)
-      }
-
-    val sampledIndices = generateSequence()
-    join(sampledIndices.init.map(tokens))
   }
 
 }
