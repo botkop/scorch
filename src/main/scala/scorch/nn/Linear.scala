@@ -5,7 +5,7 @@ import botkop.numsca.Tensor
 import scorch.autograd.Variable
 
 case class Linear(weights: Variable, bias: Variable)
-    extends SimpleModule(Seq(weights, bias)) {
+    extends Module(Seq(weights, bias)) {
   override def forward(x: Variable): Variable = {
     x.dot(weights.t()) + bias
   }

@@ -1,7 +1,7 @@
 package scorch.nn.rnn
 
 import scorch.autograd.Variable
-import scorch.nn.MultiVarModule
+import scorch.nn._
 
 import scala.annotation.tailrec
 
@@ -10,7 +10,7 @@ import scala.annotation.tailrec
   * and sampling of results.
   * @param cell the cell base underlying this Rnn
   */
-case class RnnBase(cell: RnnCellBase) extends MultiVarModule(cell.parameters) {
+case class RnnBase(cell: RnnCellBase) extends Module[Seq](cell.parameters) {
 
   /**
     * Performs the forward propagation through the RNN
@@ -20,7 +20,7 @@ case class RnnBase(cell: RnnCellBase) extends MultiVarModule(cell.parameters) {
   override def forward(xs: Seq[Variable]): Seq[Variable] =
     xs.foldLeft(List.empty[Variable], cell.initialTrackingStates) {
         case ((yhs, p0), x) =>
-          val next = cell(x +: p0: _*)
+          val next = cell(x +: p0)
           val (yht, p1) = (next.head, next.tail)
           (yhs :+ yht, p1)
       }
@@ -51,7 +51,7 @@ case class RnnBase(cell: RnnCellBase) extends MultiVarModule(cell.parameters) {
     def generateToken(xPrev: Variable,
                       pPrev: Seq[Variable]): (Variable, Int, Seq[Variable]) = {
       // Forward propagate x
-      val next = cell(xPrev +: pPrev: _*)
+      val next = cell(xPrev +: pPrev)
       val (yHat, pNext) = (next.head, next.tail)
       // Sample the index of a token within the vocabulary from the probability distribution y
       val nextIdx =

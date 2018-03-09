@@ -6,7 +6,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil._
 import scorch.autograd._
-import scorch.nn.SimpleModule
+import scorch.nn.Module
 import scorch.sandbox.rnn
 
 class TemporalAffineSpec extends FlatSpec with Matchers {
@@ -34,7 +34,7 @@ class TemporalAffineSpec extends FlatSpec with Matchers {
 
 }
 
-case class TemporalAffine(w: Variable, b: Variable) extends SimpleModule(Seq(w, b)) {
+case class TemporalAffine(w: Variable, b: Variable) extends Module(Seq(w, b)) {
   override def forward(x: Variable): Variable =
     rnn.TemporalAffineFunction(x, w, b).forward()
 }

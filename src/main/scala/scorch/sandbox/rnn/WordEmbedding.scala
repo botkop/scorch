@@ -3,16 +3,17 @@ package scorch.sandbox.rnn
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import scorch.autograd._
-import scorch.nn.SimpleModule
+import scorch.nn.Module
 
 import scala.language.postfixOps
 
-case class WordEmbedding(w: Variable) extends SimpleModule(Seq(w)) {
+case class WordEmbedding(w: Variable) extends Module(Seq(w)) {
   override def forward(x: Variable): Variable =
     WordEmbeddingFunction(x, w).forward()
 }
 
 object WordEmbedding {
+
   /**
     * Initialize by dimension
     * @param v vocabulary size

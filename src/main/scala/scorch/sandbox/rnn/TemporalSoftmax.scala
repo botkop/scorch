@@ -3,9 +3,9 @@ package scorch.sandbox.rnn
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import scorch.autograd._
-import scorch.nn.SimpleModule
+import scorch.nn.Module
 
-case class TemporalSoftmax(y: Variable, mask: Variable) extends SimpleModule {
+case class TemporalSoftmax(y: Variable, mask: Variable) extends Module {
   override def forward(x: Variable): Variable =
     TemporalSoftmaxFunction(x, y, mask).forward()
 }

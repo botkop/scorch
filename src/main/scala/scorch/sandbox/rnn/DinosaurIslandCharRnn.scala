@@ -4,7 +4,7 @@ import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import scorch._
 import scorch.autograd._
-import scorch.nn.MultiVarModule
+import scorch.nn.Module
 import scorch.optim.Optimizer
 
 import scala.annotation.tailrec
@@ -71,7 +71,7 @@ object DinosaurIslandCharRnn extends App {
     val (nx, ny) = (vocabSize, vocabSize)
 
     // define the RNN model
-    val rnn = cellType match {
+    val rnn: BaseRnnCell = cellType match {
       case "rnn"  => RnnCell(na, nx, ny)
       case "lstm" => LstmCell(na, nx, ny)
       case "gru"  => GruCell(na, nx, ny)
@@ -127,7 +127,7 @@ object DinosaurIslandCharRnn extends App {
             xt.data(x, 0) := 1
 
           val parameters = xt +: p0
-          val next = rnn(parameters: _*)
+          val next = rnn(parameters)
           val (yht, p1) = (next.head, next.tail)
           (yhs :+ yht, p1)
       }
@@ -157,7 +157,7 @@ object DinosaurIslandCharRnn extends App {
     * and a method for generating the initial states
     * @param vs local parameters of the module
     */
-  abstract class BaseRnnCell(vs: Seq[Variable]) extends MultiVarModule(vs) {
+  abstract class BaseRnnCell(vs: Seq[Variable]) extends Module[Seq](vs) {
 
     /**
       * Number of units in the cell
@@ -449,7 +449,7 @@ object DinosaurIslandCharRnn extends App {
         xPrev: Variable,
         pPrev: Seq[Variable]): (Variable, Int, Seq[Variable]) = {
       // Forward propagate x
-      val next = rnn(xPrev +: pPrev: _*)
+      val next = rnn(xPrev +: pPrev)
       val (yHat, pNext) = (next.head, next.tail)
       // Sample the index of a character within the vocabulary from the probability distribution y
       val nextIdx = ns.choice(ns.arange(vocabSize), yHat.data).squeeze().toInt

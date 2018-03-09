@@ -4,10 +4,10 @@ import botkop.numsca.:>
 import botkop.{numsca => ns}
 import scorch._
 import scorch.autograd._
-import scorch.nn.SimpleModule
+import scorch.nn.Module
 
 case class Rnn(h0: Variable, wX: Variable, wH: Variable, b: Variable)
-    extends SimpleModule(Seq(h0, wX, wH, b)) {
+    extends Module(Seq(h0, wX, wH, b)) {
 
   override def forward(x: Variable): Variable =
     RnnFunction(x, h0, wX, wH, b).forward()

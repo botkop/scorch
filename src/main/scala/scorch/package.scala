@@ -1,5 +1,4 @@
 import scorch.autograd._
-import scorch.nn.Relu
 
 
 package object scorch {

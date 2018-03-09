@@ -7,7 +7,6 @@ import scorch.crossEntropyLoss
 import scorch.nn.rnn.RnnBase
 import scorch.optim.{Adam, Nesterov, Optimizer, SGD}
 
-import scala.annotation.tailrec
 import scala.io.Source
 import scala.util.Random
 

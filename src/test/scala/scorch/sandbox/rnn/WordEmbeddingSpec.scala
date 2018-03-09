@@ -9,6 +9,7 @@ import scorch.TestUtil._
 import scorch.autograd._
 import scorch.nn._
 import scorch._
+import scorch.nn.Infer.Id
 import scorch.optim.SGD
 
 import scala.language.postfixOps
@@ -100,7 +101,7 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
     case class NGramLanguageModeler(vocabSize: Int,
                                     embeddingDim: Int,
                                     contextSize: Int)
-        extends SimpleModule {
+        extends Module {
 
       val embeddings = WordEmbedding(vocabSize, embeddingDim)
       val linear1 = Linear(contextSize * embeddingDim, 128)
@@ -115,7 +116,7 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
         out2
       }
 
-      override def subModules: Seq[SimpleModule] = Seq(embeddings, linear1, linear2)
+      override def subModules: Seq[Module[Id]] = Seq(embeddings, linear1, linear2)
     }
 
     val model = NGramLanguageModeler(vocab.length, embeddingDim, contextSize)
