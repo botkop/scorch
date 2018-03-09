@@ -2,9 +2,9 @@ package scorch.sandbox.rnn
 
 import botkop.{numsca => ns}
 import scorch.autograd._
-import scorch.nn.Module
+import scorch.nn.SimpleModule
 
-case class TemporalAffine(w: Variable, b: Variable) extends Module(Seq(w, b)) {
+case class TemporalAffine(w: Variable, b: Variable) extends SimpleModule(Seq(w, b)) {
   override def forward(x: Variable): Variable =
     TemporalAffineFunction(x, w, b).forward()
 }
