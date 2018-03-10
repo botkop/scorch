@@ -15,6 +15,9 @@ case class Variable(data: Tensor,
                     name: Option[String] = None)
     extends LazyLogging {
 
+  override def toString: String =
+    if (name.isDefined) s"name: ${name.get}, data: $data" else s"data: $data"
+
   lazy val grad: Variable =
     Variable(ns.zerosLike(data), name = name.map(n => s"g_$n"))
   def shape: List[Int] = data.shape.toList
@@ -47,4 +50,15 @@ case class Variable(data: Tensor,
   def t(): Variable = Transpose(this).forward()
   def reshape(shape: List[Int]): Variable = Reshape(this, shape).forward()
   def reshape(shape: Int*): Variable = reshape(shape.toList)
+
+  def exp(): Variable = Exp(this).forward()
+  def mean(): Variable = Mean(this).forward()
+  def sigmoid(): Variable = Sigmoid(this).forward()
+  def softmax(): Variable = Softmax(this).forward()
+  def tanh(): Variable = Tanh(this).forward()
+  def relu(): Variable = Threshold(this, 0).forward()
+
+  def cat(w: Variable, axis: Int = 0): Variable =
+    Concat(this, w, axis).forward()
+
 }
