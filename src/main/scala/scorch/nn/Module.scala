@@ -6,15 +6,23 @@ import scala.language.higherKinds
 
 sealed trait Infer[F[_]]
 trait LowPriority {
-  implicit def inferDefault[F[_]]: Infer[F] = new Infer[F] {
-  }
+  implicit def inferDefault[F[_]]: Infer[F] = new Infer[F] {}
 }
 object Infer extends LowPriority {
   type Id[A] = A
   implicit def inferId: Infer[Id] = new Infer[Id] {}
 }
 
-abstract class Module[F[_]: Infer](localParameters: Seq[Variable] = Nil) {
+abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
+
+  def subModules: Seq[BaseModule] = Seq.empty
+
+  def parameters: Seq[Variable] =
+    localParameters ++ subModules.flatMap(_.parameters)
+
+  def zeroGrad(): Unit =
+    parameters.map(_.grad).foreach(g => g.data := 0)
+
   /*
   Pytorch way of solving distinction between training and test mode is by using a mutable variable.
   Perhaps there is a better way.
@@ -36,33 +44,11 @@ abstract class Module[F[_]: Infer](localParameters: Seq[Variable] = Nil) {
    */
   def eval(): Unit = train(false)
 
-  def subModules: Seq[Module[F]] = Seq.empty
-  def parameters: Seq[Variable] =
-    localParameters ++ subModules.flatMap(_.parameters)
+}
 
-  def zeroGrad(): Unit =
-    parameters.map(_.grad).foreach(g => g.data := 0)
-
+abstract class Module[F[_]: Infer](localParameters: Seq[Variable] = Nil)
+    extends BaseModule(localParameters) {
   def forward(x: F[Variable]): F[Variable]
   def apply(x: F[Variable]): F[Variable] = forward(x)
-
 }
 
-/*
-abstract class SimpleModule(localParameters: Seq[Variable] = Nil)
-    extends BaseModule[Id](localParameters) with LazyLogging {
-  override def forward(x: Variable): Variable
-}
- */
-
-/*
- * Extension of Module, that allows to pass multiple variables in the forward pass
- * This forward pass also returns multiple variables.
- * The single parameter forward pass is deactivated.
- * @param localParameters the trainable parameters of this module
- */
-/*
-abstract class Module(localParameters: Seq[Variable] = Nil) extends BaseModule[Seq](localParameters) {
-  override def forward(xs: Seq[Variable]): Seq[Variable]
-}
- */

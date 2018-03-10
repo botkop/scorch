@@ -1,6 +1,5 @@
 import scorch.autograd._
 
-
 package object scorch {
   implicit class AutoGradDoubleOps(d: Double) {
     def +(v: Variable): Variable = v + d
@@ -14,7 +13,8 @@ package object scorch {
   def sigmoid(v: Variable): Variable = Sigmoid(v).forward()
   def softmax(v: Variable): Variable = Softmax(v).forward()
   def tanh(v: Variable): Variable = Tanh(v).forward()
-  def cat(v: Variable, w: Variable, axis: Int = 0): Variable = Concat(v, w).forward()
+  def cat(v: Variable, w: Variable, axis: Int = 0): Variable =
+    Concat(v, w, axis).forward()
   def relu(x: Variable): Variable = Threshold(x, 0).forward()
   def softmaxLoss(x: Variable, y: Variable): Variable =
     SoftmaxLoss(x, y).forward()

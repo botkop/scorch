@@ -67,14 +67,13 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules: Seq[Linear] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(relu(fc1(x)))
+      override def subModules = Seq(fc1, fc2)
+      override def forward(x: Variable) = fc2(relu(fc1(x)))
     }
 
     val n = Net()
 
     val optimizer = SGD(n.parameters, lr = 1)
-
     val input = Variable(ns.randn(numSamples, nf1))
 
     for (j <- 0 to 500) {
@@ -117,8 +116,8 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules: Seq[Linear] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(relu(fc1(x)))
+      override def subModules = Seq(fc1, fc2)
+      override def forward(x: Variable) = fc2(relu(fc1(x)))
     }
 
     val n = Net()
@@ -167,8 +166,8 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules: Seq[Linear] = Seq(fc1, fc2)
-      override def forward(x: Variable): Variable = fc2(relu(fc1(x)))
+      override def subModules = Seq(fc1, fc2)
+      override def forward(x: Variable) = fc2(relu(fc1(x)))
     }
 
     val n = Net()
@@ -203,7 +202,6 @@ class ModuleSpec extends FlatSpec with Matchers {
     loss.data.squeeze should be < 0.3
   }
 
-  /*
   it should "compute a 2 layer fc network with sgd optimizer and dropout" in {
     ns.rand.setSeed(231)
     Random.setSeed(231)
@@ -220,9 +218,8 @@ class ModuleSpec extends FlatSpec with Matchers {
       val fc2 = Linear(nf2, numClasses)
       val dropout = Dropout(p = 0.9)
 
-      override def subModules: Seq[Linear] = Seq(fc1, fc2, dropout)
-
-      override def forward(x: Variable): Id[Variable] = fc2(relu(dropout(fc1(x))))
+      override def subModules = Seq(fc1, fc2, dropout)
+      override def forward(x: Variable) = fc2(relu(dropout(fc1(x))))
     }
 
     val n = Net()
@@ -249,6 +246,7 @@ class ModuleSpec extends FlatSpec with Matchers {
       optimizer.step()
     }
 
+    // set dropout in eval mode
     n.eval()
     val output = n(input)
     val loss = softmaxLoss(output, target)
@@ -259,6 +257,5 @@ class ModuleSpec extends FlatSpec with Matchers {
     loss.data.squeeze should be < 1e-3
 
   }
-  */
 
 }
