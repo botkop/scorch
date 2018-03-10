@@ -92,7 +92,6 @@ class ModuleSpec extends FlatSpec with Matchers {
       loss.backward()
       optimizer.step()
     }
-
     val output = n(input)
     val loss = softmaxLoss(output, target)
     val guessed = ns.argmax(output.data, axis = 1)
@@ -100,6 +99,60 @@ class ModuleSpec extends FlatSpec with Matchers {
 
     accuracy should be > 0.8
     loss.data.squeeze should be < 1e-3
+  }
+
+  it should "correctly process the example from the README" in {
+    val numSamples = 128
+    val numClasses = 10
+    val nf1 = 40
+    val nf2 = 20
+
+    // Define the neural network
+    case class Net() extends Module {
+      val fc1 = Linear(nf1, nf2) // an affine operation: y = Wx + b
+      val fc2 = Linear(nf2, numClasses) // another one
+
+      // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
+      override def forward(x: Variable) = fc2(relu(fc1(x)))
+
+      // register the submodules to allow the world to know what this net is composed of
+      override def subModules = Seq(fc1, fc2)
+    }
+
+    // instantiate
+    val net = Net()
+
+    // create an optimizer for updating the parameters
+    val optimizer = SGD(net.parameters, lr = 0.01)
+
+    // random target and input to train on
+    val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+    val input = Variable(ns.randn(numSamples, nf1))
+
+    for (j <- 0 to 1000) {
+
+      // reset the gradients of the parameters
+      optimizer.zeroGrad()
+
+      // forward input through the network
+      val output = net(input)
+
+      // calculate the loss
+      val loss = softmaxLoss(output, target)
+
+      // print loss and accuracy
+      if (j % 100 == 0) {
+        val guessed = ns.argmax(output.data, axis = 1)
+        val accuracy = ns.sum(target.data == guessed) / numSamples
+        println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+      }
+
+      // back propagate the derivatives
+      loss.backward()
+
+      // update the parameters with the gradients
+      optimizer.step()
+    }
   }
 
   it should "compute a 2 layer fc network with adam optimizer" in {

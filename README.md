@@ -8,9 +8,10 @@ See [here](https://gist.github.com/koen-dejonghe/7fdb032a800526a82cec604f61cefb2
 
 
 ```scala
-import scorch.autograd.Variable
-import scorch.nn._
 import botkop.{numsca => ns}
+import scorch.autograd.Variable
+import scorch.optim.SGD
+import scorch._
 
 val numSamples = 128
 val numClasses = 10
@@ -21,19 +22,19 @@ val nf2 = 20
 case class Net() extends Module {
   val fc1 = Linear(nf1, nf2) // an affine operation: y = Wx + b
   val fc2 = Linear(nf2, numClasses) // another one
-  
+
   // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
-  override def forward(x: Variable): Variable = fc2(nn.relu(fc1(x)))
-  
+  override def forward(x: Variable) = fc2(relu(fc1(x)))
+
   // register the submodules to allow the world to know what this net is composed of
-  override def subModules(): Seq[Module] = Seq(fc1, fc2)
+  override def subModules = Seq(fc1, fc2)
 }
 
 // instantiate
 val net = Net()
 
 // create an optimizer for updating the parameters
-val optimizer = SGD(net.parameters(), lr = 0.01)
+val optimizer = SGD(net.parameters, lr = 0.01)
 
 // random target and input to train on
 val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
@@ -46,9 +47,9 @@ for (j <- 0 to 1000) {
 
   // forward input through the network
   val output = net(input)
-  
+
   // calculate the loss
-  val loss = nn.softmax(output, target)
+  val loss = softmaxLoss(output, target)
 
   // print loss and accuracy
   if (j % 100 == 0) {
@@ -59,7 +60,7 @@ for (j <- 0 to 1000) {
 
   // back propagate the derivatives
   loss.backward()
-  
+
   // update the parameters with the gradients
   optimizer.step()
 }
