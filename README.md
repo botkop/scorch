@@ -2,7 +2,14 @@ Scorch
 ======
 Scorch is a lightweight neural net framework in Scala inspired by PyTorch.
 
-It has [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) built in and follows an [imperative coding style](https://mxnet.incubator.apache.org/architecture/program_model.html#symbolic-vs-imperative-programs).
+It has [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) built in 
+and follows an [imperative coding style](https://mxnet.incubator.apache.org/architecture/program_model.html#symbolic-vs-imperative-programs).
+
+Scorch uses [numsca](https://github.com/botkop/numsca) for creation and processing of Tensors.
+
+The documentation below is almost an exact copy of Autograd and Neural Networks sections of 
+the [PyTorch blitz]("http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html"),
+using Scorch instead of PyTorch.
 
 # Automatic differentiation
 
@@ -100,7 +107,7 @@ A typical training procedure for a neural network is as follows:
 * Propagate gradients back into the network’s parameters
 * Update the weights of the network, typically using a simple update rule: 
 
-  `weight = weight - learning_rate * gradient`
+  `weight = weight - learningRate * gradient`
   
 ## Define the network
 Let’s define this network:
@@ -164,9 +171,119 @@ net.zeroGrad()
 out.backward(Variable(ns.randn(numSamples, numClasses)))
 ```
 
+Before proceeding further, let’s recap all the classes you’ve seen so far.
 
-------
-Example:
+__Recap:__
+* `numsca.Tensor` - A multi-dimensional array.
+* `autograd.Variable` - Wraps a Tensor and records the history of operations applied to it. 
+
+  Has (almost) the same API as a `Tensor`, with some additions like `backward()`. Also holds the gradient w.r.t. the tensor.
+  
+* `nn.Module` - Neural network module. Convenient way of encapsulating parameters.
+* `autograd.Function` - Implements forward and backward definitions of an autograd operation. 
+
+  Every `Variable` operation, creates at least a single `Function` node, 
+  that connects to functions that created a `Variable` and encodes its history.
+
+__At this point, we covered:__
+
+* Defining a neural network
+* Processing inputs and calling backward
+
+__Still Left:__
+
+* Computing the loss
+* Updating the weights of the network
+
+## Loss function
+A loss function takes the (output, target) pair of inputs, 
+and computes a value that estimates how far away the output is from the target.
+
+There are several different loss functions under the `scorch` package . 
+A common loss is: `scorch.softmaxLoss` which computes the softmax loss between the input and the target.
+
+For example:
+```scala
+val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+val output = net(input)
+val loss = softmaxLoss(output, target)
+println(loss)
+```
+```text
+data: 5.61
+```
+
+Now, if you follow loss in the backward direction, 
+using its `.gradFn` attribute, you will see a graph of computations that looks like this:
+```text
+input -> linear -> relu -> linear
+      -> SoftmaxLoss
+      -> loss
+```
+So, when we call `loss.backward()`, 
+the whole graph is differentiated w.r.t. the loss, 
+and all Variables in the graph will have their `.grad` Variable accumulated with the gradient.
+
+## Backprop
+
+To backpropagate the error all we have to do is to call `loss.backward()`. 
+You need to clear the existing gradients though, else gradients will be accumulated to existing gradients.
+
+Now we will call `loss.backward()`, and have a look at fc1's bias gradients before and after the backward.
+
+```scala
+net.zeroGrad()
+println("fc1.bias.grad before backward")
+println(fc1.bias.grad)
+loss.backward()
+println("fc1.bias.grad after backward")
+
+```
+```text
+fc1.bias.grad before backward
+data: [0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00,  0.00]
+fc1.bias.grad after backward
+data: [0.07,  0.20,  0.21,  -0.04,  0.16,  0.09,  0.34,  -0.06,  0.17,  -0.06,  0.02,  -0.01,  -0.07,  0.09,  0.12,  -0.04,  0.19,  0.28,  0.06,  0.13]
+```
+
+Now, we have seen how to use loss functions.
+
+__The only thing left to learn is:__
+
+* Updating the weights of the network
+
+## Update the weights
+
+The simplest update rule used in practice is the Stochastic Gradient Descent (SGD):
+
+  `weight = weight - learningRate * gradient`
+  
+We can implement this using simple scala code:
+
+```scala
+net.parameters.foreach(p => p.data -= p.grad.data * learningRate)
+```
+
+However, as you use neural networks, you want to use various different update rules such as 
+SGD, Nesterov, Adam, etc. 
+To enable this, we built a small package: scorch.optim that implements these methods. Using it is very simple:
+```scala
+import scorch.optim.SGD
+
+// create an optimizer for updating the parameters
+val optimizer = SGD(net.parameters, lr = 0.01)
+
+// in the training loop:
+
+optimizer.zeroGrad()                   // reset the gradients of the parameters
+val output = net(input)                // forward input through the network
+val loss = softmaxLoss(output, target) // calculate the loss
+loss.backward()                        // back propagate the derivatives
+optimizer.step()                       // update the parameters with the gradients
+```
+
+# Wrap up
+To wrap up, here is a complete example:
 
 ```scala
 import botkop.{numsca => ns}
@@ -227,15 +344,13 @@ for (j <- 0 to 1000) {
 }
 ```
 
-## Dependency
+# Dependency
 Add this to build.sbt:
 ```scala
 libraryDependencies += "be.botkop" %% "scorch" % "0.1.0-SNAPSHOT"
 ```
 
-Scorch uses [numsca](https://github.com/botkop/numsca)
-
-## References
+# References
 - [Deep Learning with PyTorch: A 60 Minute Blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html)
 - [Backpropagation, Intuitions](http://cs231n.github.io/optimization-2/)
 - [Automatic Differentiation in Machine Learning: a Survey](https://arxiv.org/pdf/1502.05767.pdf)
