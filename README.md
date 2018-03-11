@@ -8,7 +8,7 @@ and follows an [imperative coding style](https://mxnet.incubator.apache.org/arch
 Scorch uses [numsca](https://github.com/botkop/numsca) for creation and processing of Tensors.
 
 The documentation below is almost an exact copy of Autograd and Neural Networks sections of 
-the [PyTorch blitz]("http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html"),
+the [PyTorch blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html),
 using Scorch instead of PyTorch.
 
 # Automatic differentiation
