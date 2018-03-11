@@ -21,7 +21,7 @@ It is a define-by-run framework, which means that your backprop is defined by ho
 
 ## Variable
 `autograd.Variable` is the central class of the package. 
-It wraps a [numsca](https://github.com/botkop/numsca)`Tensor`, and supports nearly all the operations defined on it. 
+It wraps a [numsca](https://github.com/botkop/numsca) `Tensor`, and supports nearly all the operations defined on it. 
 Once you finish your computation you can call `.backward()` and have all the gradients computed automatically.
 
 You can access the raw tensor through the `.data` attribute, while the gradient w.r.t. this variable is accumulated into `.grad`.
