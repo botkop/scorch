@@ -29,7 +29,7 @@ Each variable has a `.gradFn` attribute that references the `Function` that has 
 
 If you want to compute the derivatives, you can call `.backward()` on a `Variable`. 
 If you do not specify a gradient argument, then Scorch will create one for you on the fly,
-of the same shape as the Variable, and filled with ones. 
+of the same shape as the Variable, and filled with all ones. 
 (This is different from Pytorch)
 
 ```scala
@@ -130,6 +130,39 @@ val net = Net()
 ```
 You just have to define the forward function, and list the layers as the output of the subModules method.
 The backward function (where gradients are computed) is automatically defined for you using autograd.
+
+The learnable parameters of a model are returned by `net.parameters`
+
+```scala
+val params = net.parameters
+println(params.length)
+println(params.head.shape)
+```
+```text
+4
+List(20, 40)
+```
+The input to the forward method is an `autograd.Variable`, and so is the output. 
+```scala
+import botkop.{numsca => ns}
+
+val input = Variable(ns.randn(numSamples, nf1))
+val out = net(input)
+println(out)
+println(out.shape)
+```
+```text
+data: [[1.60,  -0.22,  -0.66,  0.86,  -0.59,  -0.80,  -0.40,  -1.37,  -1.94,  1.23],
+ [1.15,  -3.81,  5.45,  6.81,  -3.02,  2.35,  3.75,  1.79,  -7.31,  3.60],
+ [3.12,  -0.94,  2.69, ...
+ 
+List(128, 10)
+```
+Zero the gradient buffers of all parameters and backprop with random gradients.
+```scala
+net.zeroGrad()
+out.backward(Variable(ns.randn(numSamples, numClasses)))
+```
 
 
 ------
