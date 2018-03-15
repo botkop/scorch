@@ -146,30 +146,6 @@ class FunctionGradientSpec
     oneOpGradientCheck(f, a)
   }
 
-  "BatchNorm" should "calculate gradients" in {
-
-    val (n, d) = (4, 3)
-    val x = Variable(5 * ns.randn(n, d) + 12)
-    val gamma = Variable(ns.randn(d))
-    val beta = Variable(ns.randn(d))
-
-
-    def f(a: Variable): Variable = {
-      val runningMean: Tensor = ns.zerosLike(gamma.data)
-      val runningVar: Tensor = ns.zerosLike(gamma.data)
-      BatchNormFunction(a,
-        1e-5,
-        0.9,
-        runningMean,
-        runningVar,
-        gamma,
-        beta,
-        inTrainingMode = true).forward()
-    }
-
-    oneOpGradientCheck(f, x)
-  }
-
   "Concat" should "calculate gradients" in {
     val a = Variable(ns.randn(3, 4))
     val b = Variable(ns.randn(4, 4))

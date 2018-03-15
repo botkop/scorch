@@ -5,8 +5,8 @@ import scorch.autograd.{Function, Variable}
 
 case class BatchNorm(gamma: Variable,
                      beta: Variable,
-                     eps: Double,
-                     momentum: Double)
+                     eps: Double = 1e-5,
+                     momentum: Double = 0.9)
     extends Module(Seq(gamma, beta)) {
 
   import BatchNorm._
@@ -28,8 +28,8 @@ case class BatchNorm(gamma: Variable,
 
 object BatchNorm {
   def apply(shape: List[Int],
-            eps: Double = 1e-5,
-            momentum: Double = 0.9): BatchNorm = {
+            eps: Double,
+            momentum: Double): BatchNorm = {
     val d = shape.head
     val gamma = Variable(ns.ones(1, d))
     val beta = Variable(ns.zeros(1, d))
@@ -48,7 +48,7 @@ object BatchNorm {
 
     val List(n, d) = x.shape
 
-    // all below variables are only needed in training phase
+    // all below variables are needed in training phase only
     // making them lazy, so they don't get evaluated in test phase
 
     // compute per-dimension mean and std deviation
