@@ -7,6 +7,8 @@ import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest._
 import scorch.TestUtil._
+import scorch.nn.BatchNorm.BatchNormFunction
+import scorch.nn.Dropout.DropoutFunction
 
 class FunctionGradientSpec
     extends FlatSpec
@@ -142,6 +144,30 @@ class FunctionGradientSpec
     def f(a: Variable): Variable =
       DropoutFunction(a, train = true, maybeMask = Some(mask)).forward()
     oneOpGradientCheck(f, a)
+  }
+
+  "BatchNorm" should "calculate gradients" in {
+
+    val (n, d) = (4, 3)
+    val x = Variable(5 * ns.randn(n, d) + 12)
+    val gamma = Variable(ns.randn(d))
+    val beta = Variable(ns.randn(d))
+
+
+    def f(a: Variable): Variable = {
+      val runningMean: Tensor = ns.zerosLike(gamma.data)
+      val runningVar: Tensor = ns.zerosLike(gamma.data)
+      BatchNormFunction(a,
+        1e-5,
+        0.9,
+        runningMean,
+        runningVar,
+        gamma,
+        beta,
+        inTrainingMode = true).forward()
+    }
+
+    oneOpGradientCheck(f, x)
   }
 
   "Concat" should "calculate gradients" in {

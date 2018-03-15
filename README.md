@@ -345,7 +345,7 @@ for (j <- 0 to 1000) {
 ```
 
 # Contributors
-Thanks to [Jasper](https://github.com/Jasper-M) for helping out with type inference magic far beyond my capabilities.
+Thanks to [Jasper](https://github.com/Jasper-M) for helping out with Scala type inference magic far beyond my capabilities.
 
 # Dependency
 Add this to build.sbt:
