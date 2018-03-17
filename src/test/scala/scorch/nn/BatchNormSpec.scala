@@ -7,7 +7,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
-import scorch.nn.BatchNorm.{BatchNormFunction, MyBatchNormFunction}
+import scorch.nn.BatchNorm.BatchNormFunction
 import scorch.TestUtil._
 
 class BatchNormSpec extends FlatSpec with Matchers {
@@ -24,14 +24,14 @@ class BatchNormSpec extends FlatSpec with Matchers {
     val a = ns.maximum(x.dot(w1), 0).dot(w2)
 
     println("Before batch normalization:")
-    println(s"  means: ${ns.mean(a, axis=0)}")
+    println(s"  means: ${ns.mean(a, axis = 0)}")
     println(s"  stds: ${ns.std(a, axis = 0)}")
 
     val bn = BatchNorm(Variable(ns.ones(d3)), Variable(ns.zeros(d3)))
     bn.train()
 
     val aNorm = bn.forward(Variable(a))
-    val meanNorm = ns.mean(aNorm.data, axis=0)
+    val meanNorm = ns.mean(aNorm.data, axis = 0)
     val stdNorm = ns.std(aNorm.data, axis = 0)
     println("After batch normalization:  (gamma=1, beta=0)")
     println(s"  means: $meanNorm")
@@ -42,6 +42,8 @@ class BatchNormSpec extends FlatSpec with Matchers {
     println(meanError)
     meanError should be < 1e-5
     val stdError = relError(stdNorm, ns.ones(d3))
+
+    println(stdNorm)
     println(stdError)
     stdError should be < 1e-5
 
@@ -56,7 +58,7 @@ class BatchNormSpec extends FlatSpec with Matchers {
     val a = ns.maximum(x.dot(w1), 0).dot(w2)
 
     println("Before batch normalization:")
-    println(s"  means: ${ns.mean(a, axis=0)}")
+    println(s"  means: ${ns.mean(a, axis = 0)}")
     println(s"  stds: ${ns.std(a, axis = 0)}")
 
     // Now means should be close to beta and stds close to gamma
@@ -69,7 +71,7 @@ class BatchNormSpec extends FlatSpec with Matchers {
     bn.train()
 
     val aNorm = bn.forward(Variable(a))
-    val meanNorm = ns.mean(aNorm.data, axis=0)
+    val meanNorm = ns.mean(aNorm.data, axis = 0)
     val stdNorm = ns.std(aNorm.data, axis = 0)
     println("After batch normalization: (nontrivial gamma, beta)")
     println(s"  means: $meanNorm")
@@ -118,14 +120,14 @@ class BatchNormSpec extends FlatSpec with Matchers {
 
     // Means should be close to zero and stds close to one, but will be
     // noisier than training-time forward passes.
-    val meanNorm = ns.mean(aNorm.data, axis=0)
+    val meanNorm = ns.mean(aNorm.data, axis = 0)
     val stdNorm = ns.std(aNorm.data, axis = 0)
     println("After batch normalization:  (test-time)")
     println(s"  means: $meanNorm")
     println(s"  stds: $stdNorm")
 
-    meanNorm.data.foreach(d => d should be (0.0 +- 0.1))
-    stdNorm.data.foreach(d => d should be (1.0 +- 0.2))
+    meanNorm.data.foreach(d => d should be(0.0 +- 0.1))
+    stdNorm.data.foreach(d => d should be(1.0 +- 0.2))
   }
 
   it should "calculate gradients" in {
@@ -140,47 +142,43 @@ class BatchNormSpec extends FlatSpec with Matchers {
 
     def fx(a: Variable): Variable = {
       BatchNormFunction(a,
-        1e-4,
-        0.9,
-        // 0.0,
-        // 1.0,
-        runningMean,
-        runningVar,
-        gamma,
-        beta,
-        inTrainingMode = true).forward()
+                        1e-4,
+                        0.9,
+                        // 0.0,
+                        // 1.0,
+                        runningMean,
+                        runningVar,
+                        gamma,
+                        beta,
+                        inTrainingMode = true).forward()
     }
 
     oneOpGradientCheck(fx, x.copy())
 
-
-
-
     def fg(a: Variable): Variable = {
       BatchNormFunction(x,
-        1e-5,
-        0.9,
-        runningMean,
-        runningVar,
-        a,
-        beta,
-        inTrainingMode = true).forward()
+                        1e-5,
+                        0.9,
+                        runningMean,
+                        runningVar,
+                        a,
+                        beta,
+                        inTrainingMode = true).forward()
     }
 
     def fb(a: Variable): Variable = {
       BatchNormFunction(x,
-        1e-5,
-        0.9,
-        runningMean,
-        runningVar,
-        gamma,
-        a,
-        inTrainingMode = true).forward()
+                        1e-5,
+                        0.9,
+                        runningMean,
+                        runningVar,
+                        gamma,
+                        a,
+                        inTrainingMode = true).forward()
     }
 
     oneOpGradientCheck(fg, gamma.copy())
     oneOpGradientCheck(fb, beta.copy())
   }
-
 
 }

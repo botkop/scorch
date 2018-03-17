@@ -33,6 +33,7 @@ object BatchNorm {
     BatchNorm(gamma, beta, eps, momentum)
   }
 
+
   case class BatchNormFunction(x: Variable,
                                eps: Double,
                                momentum: Double,
@@ -52,20 +53,18 @@ object BatchNorm {
         val v = variance(x, axis = 0)
 
         runningMean := (momentum * runningMean) + ((1.0 - momentum) * mu.data)
+
+        println(runningVar.shape.toList)
+        println(x.shape)
+
         runningVar := (momentum * runningVar) + ((1.0 - momentum) * v.data)
+
 
         val xMu = x - mu
         val invVar = 1.0 / sqrt(v + eps)
         val xHat = xMu * invVar
         (gamma * xHat) + beta
 
-
-        /*
-        val xMu = x - mean(x, axis = 0)
-        val invVar = 1.0 / sqrt(variance(x, axis = 0) + eps)
-        val xHat = xMu * invVar
-        (gamma * xHat) + beta
-        */
       }
       else {
         val out = ((x.data - runningMean) / ns.sqrt(runningVar + eps)) * gamma.data + beta.data
@@ -124,15 +123,6 @@ object BatchNorm {
       gamma.grad.data := ns.sum(xHat * dOut, axis = 0)
 
       // intermediate partial derivatives
-//      val dxHat = dOut * gamma.data
-//      val dVar = ns.sum((dxHat * xMu) * -0.5 * (invVar ** 3.0), axis=0)
-//      val dMu = ns.sum(dxHat * -invVar, axis = 0) + (dVar * (-2.0 / n) * ns.sum(xMu, axis=0))
-//      val dx1 = dxHat * invVar
-//      val dx2 = dVar * (2.0 / n) * xMu
-//      val dx3 = (1.0 / n) * dMu
-//      val dx = dx1 + dx2 + dx3
-
-      // intermediate partial derivatives
       val dxHat = dOut * gamma.data
       val dx = (invVar / n) * ((dxHat * n) - ns.sum(dxHat, axis = 0) -
         (xHat * ns.sum(dxHat * xHat, axis = 0)))
@@ -140,6 +130,6 @@ object BatchNorm {
       x.backward(Variable(dx))
     }
   }
- */
+  */
 
 }
