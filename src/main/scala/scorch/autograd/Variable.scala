@@ -53,10 +53,15 @@ case class Variable(data: Tensor,
 
   def exp(): Variable = Exp(this).forward()
   def mean(): Variable = Mean(this).forward()
+  def mean(axis: Int): Variable = MeanByAxis(this, axis).forward()
   def sigmoid(): Variable = Sigmoid(this).forward()
   def softmax(): Variable = Softmax(this).forward()
   def tanh(): Variable = Tanh(this).forward()
   def relu(): Variable = Threshold(this, 0).forward()
+  def variance(): Variable = Variance(this).forward()
+  def variance(axis: Int): Variable = VarianceByAxis(this, axis).forward()
+  def sqrt(): Variable = Sqrt(this).forward()
+  def abs(): Variable = Abs(this).forward()
 
   def cat(w: Variable, axis: Int = 0): Variable =
     Concat(this, w, axis).forward()

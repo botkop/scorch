@@ -144,11 +144,29 @@ case class PowConstant(v: Variable, d: Double) extends Function {
   }
 }
 
+case class Sqrt(v: Variable) extends Function {
+  val cache: Tensor = ns.sqrt(v.data)
+  override def forward(): Variable = Variable(cache, Some(this))
+  override def backward(gradOutput: Variable): Unit = {
+    val dv = (1.0 / (2 * cache)) * gradOutput.data
+    v.backward(Variable(dv))
+  }
+}
+
+case class Abs(v: Variable) extends Function {
+  val cache: Tensor = ns.abs(v.data)
+  override def forward(): Variable = Variable(cache, Some(this))
+
+  override def backward(gradOutput: Variable): Unit = {
+    val dv = (v.data / cache) * gradOutput.data
+    v.backward(Variable(dv))
+  }
+}
+
 case class Negate(v: Variable) extends Function {
   override def forward(): Variable = Variable(-v.data, Some(this))
   override def backward(gradOutput: Variable): Unit = {
     val dv = -gradOutput.data
-    logger.debug(s"negate backward, dv.shape=${dv.shape.toList}")
     v.backward(Variable(dv))
   }
 }
@@ -254,9 +272,29 @@ case class Softmax(v: Variable) extends Function {
 case class Mean(v: Variable) extends Function {
   def forward() = Variable(data = ns.mean(v.data), gradFn = Some(this))
   def backward(gradOutput: Variable): Unit = {
-    val n = v.data.shape.product
+    val n = v.shape.product
     v.backward(Variable(gradOutput.data / n))
   }
+}
+
+case class MeanByAxis(v: Variable, axis: Int) extends Function {
+  def forward() = Variable(data = ns.mean(v.data, axis), gradFn = Some(this))
+  def backward(gradOutput: Variable): Unit = {
+    val n = v.shape(axis)
+    v.backward(Variable(gradOutput.data / n))
+  }
+}
+
+case class Variance(v: Variable) extends Function {
+  override def forward(): Variable = (v - v.mean()) ** 2
+  override def backward(gradOutput: Variable): Unit =
+    v.backward(gradOutput)
+}
+
+case class VarianceByAxis(v: Variable, axis: Int) extends Function {
+  override def forward(): Variable = (v - v.mean(axis)) ** 2
+  override def backward(gradOutput: Variable): Unit =
+    v.backward(gradOutput)
 }
 
 case class Max(x: Variable, y: Variable) extends Function {

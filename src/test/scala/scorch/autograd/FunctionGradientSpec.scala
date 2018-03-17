@@ -115,10 +115,44 @@ class FunctionGradientSpec
     oneOpGradientCheck(f, a)
   }
 
+  "Abs" should "calculate gradients" in {
+    val a = Variable(ns.randn(4, 6))
+    def f(a: Variable): Variable = Abs(a).forward()
+    oneOpGradientCheck(f, a)
+  }
+
+  "Sqrt" should "calculate gradients" in {
+    val a = Variable(ns.randn(4, 6))
+    def f(a: Variable): Variable = Sqrt(a).forward()
+    oneOpGradientCheck(f, a)
+  }
+
   "Mean" should "calculate gradients" in {
     val a = Variable(ns.randn(4, 6))
     def f(a: Variable): Variable = Mean(a).forward()
     oneOpGradientCheck(f, a)
+  }
+
+  "MeanByAxis" should "calculate gradients" in {
+    val x = Variable(ns.randn(4, 6))
+    def f0(a: Variable): Variable = MeanByAxis(a, axis = 0).forward()
+    oneOpGradientCheck(f0, x)
+    def f1(a: Variable): Variable = MeanByAxis(a, axis = 1).forward()
+    oneOpGradientCheck(f1, x.copy())
+  }
+
+  "Variance" should "calculate gradients" in {
+    val a = Variable(ns.randn(4, 6))
+    def f(a: Variable): Variable = Variance(a).forward()
+    oneOpGradientCheck(f, a)
+  }
+
+  "VarianceByAxis" should "calculate gradients" in {
+    val x = Variable(ns.randn(4, 6))
+    def f0(a: Variable): Variable = VarianceByAxis(a, axis = 0).forward()
+    oneOpGradientCheck(f0, x)
+    def f1(a: Variable): Variable = VarianceByAxis(a, axis = 1).forward()
+    oneOpGradientCheck(f1, x.copy())
   }
 
   "Threshold" should "calculate gradients with a const" in {

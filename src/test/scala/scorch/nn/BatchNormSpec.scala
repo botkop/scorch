@@ -7,7 +7,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
-import scorch.nn.BatchNorm.BatchNormFunction
+import scorch.nn.BatchNorm.{BatchNormFunction, MyBatchNormFunction}
 import scorch.TestUtil._
 
 class BatchNormSpec extends FlatSpec with Matchers {
@@ -124,28 +124,26 @@ class BatchNormSpec extends FlatSpec with Matchers {
     println(s"  means: $meanNorm")
     println(s"  stds: $stdNorm")
 
-    val meanError = relError(meanNorm, ns.zeros(d3))
-    println(meanError)
-    meanError should be < 1e-5
-    val stdError = relError(stdNorm, ns.ones(d3))
-    println(stdError)
-    stdError should be < 1e-5
+    meanNorm.data.foreach(d => d should be (0.0 +- 0.1))
+    stdNorm.data.foreach(d => d should be (1.0 +- 0.2))
   }
 
   it should "calculate gradients" in {
 
     val (n, d) = (4, 5)
     val x = Variable(5 * ns.randn(n, d) + 12)
-    val gamma = Variable(ns.randn(d))
-    val beta = Variable(ns.randn(d))
 
+    val gamma = Variable(ns.randn(1, d))
+    val beta = Variable(ns.randn(1, d))
+    val runningMean: Tensor = ns.zerosLike(gamma.data)
+    val runningVar: Tensor = ns.zerosLike(gamma.data)
 
-    def f(a: Variable): Variable = {
-      val runningMean: Tensor = ns.zerosLike(gamma.data)
-      val runningVar: Tensor = ns.zerosLike(gamma.data)
+    def fx(a: Variable): Variable = {
       BatchNormFunction(a,
-        1e-5,
+        1e-4,
         0.9,
+        // 0.0,
+        // 1.0,
         runningMean,
         runningVar,
         gamma,
@@ -153,7 +151,35 @@ class BatchNormSpec extends FlatSpec with Matchers {
         inTrainingMode = true).forward()
     }
 
-    oneOpGradientCheck(f, x)
+    oneOpGradientCheck(fx, x.copy())
+
+
+
+
+    def fg(a: Variable): Variable = {
+      BatchNormFunction(x,
+        1e-5,
+        0.9,
+        runningMean,
+        runningVar,
+        a,
+        beta,
+        inTrainingMode = true).forward()
+    }
+
+    def fb(a: Variable): Variable = {
+      BatchNormFunction(x,
+        1e-5,
+        0.9,
+        runningMean,
+        runningVar,
+        gamma,
+        a,
+        inTrainingMode = true).forward()
+    }
+
+    oneOpGradientCheck(fg, gamma.copy())
+    oneOpGradientCheck(fb, beta.copy())
   }
 
 

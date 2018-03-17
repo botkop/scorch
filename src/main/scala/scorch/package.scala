@@ -11,10 +11,15 @@ package object scorch {
   // single parameter functions
   def exp(v: Variable): Variable = v.exp()
   def mean(v: Variable): Variable = v.mean()
+  def mean(v: Variable, axis: Int): Variable = v.mean(axis)
   def sigmoid(v: Variable): Variable = v.sigmoid()
   def softmax(v: Variable): Variable = v.softmax()
   def tanh(v: Variable): Variable = v.tanh()
   def relu(v: Variable): Variable = v.relu()
+  def sqrt(v: Variable): Variable = v.sqrt()
+  def abs(v: Variable): Variable = v.abs()
+  def variance(v: Variable): Variable = v.variance()
+  def variance(v: Variable, axis: Int): Variable = v.variance(axis)
 
   // multi parameter functions
   def cat(v: Variable, w: Variable, axis: Int = 0): Variable =
