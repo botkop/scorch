@@ -224,4 +224,56 @@ class BatchNormSpec extends FlatSpec with Matchers {
     oneOpGradientCheck(fb, beta.copy())
   }
 
+  it should "have similar results for both functions" in {
+
+    val (n, d) = (100, 500)
+    val x = Variable(5 * ns.randn(n, d) + 12)
+    val gamma = Variable(ns.randn(1, d))
+    val beta = Variable(ns.randn(1, d))
+
+    val runningMean: Tensor = ns.zerosLike(gamma.data)
+    val runningVar: Tensor = ns.zerosLike(gamma.data)
+
+    val dOut = Variable(ns.randn(n, d))
+
+    val x1 = x.copy()
+    val yHat1 = BatchNormFunction(x1,
+                                  1e-5,
+                                  0.9,
+                                  runningMean.copy(),
+                                  runningVar.copy(),
+                                  gamma.copy(),
+                                  beta.copy(),
+                                  inTrainingMode = true).forward()
+
+    val x2 = x.copy()
+    val yHat2 = ChainRuleBatchNormFunction(x2,
+                                           1e-5,
+                                           0.9,
+                                           runningMean.copy(),
+                                           runningVar.copy(),
+                                           gamma.copy(),
+                                           beta.copy(),
+                                           inTrainingMode = true).forward()
+
+    val yHatError = relError(yHat1.data, yHat2.data)
+    println(yHatError)
+    yHatError should be(0.0)
+
+    val t1 = System.currentTimeMillis()
+    yHat1.backward(dOut)
+    val t2 = System.currentTimeMillis()
+    yHat2.backward(dOut)
+    val t3 = System.currentTimeMillis()
+
+    // error of gradients should be very small
+    val dyError = relError(x1.grad.data, x2.grad.data)
+    println(dyError)
+    dyError should be < 1e-12
+
+    val speedup = (t3.toDouble - t2) / (t2.toDouble - t1)
+    println(s"explicit backward batch norm function is $speedup times faster than with chain rule")
+
+  }
+
 }
