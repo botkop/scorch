@@ -7,7 +7,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
-import scorch.nn.BatchNorm.{BatchNormFunction, BatchNormFunctionChainRule}
+import scorch.nn.BatchNorm.{BatchNormFunction, ChainRuleBatchNormFunction}
 import scorch.TestUtil._
 
 class BatchNormSpec extends FlatSpec with Matchers {
@@ -187,7 +187,7 @@ class BatchNormSpec extends FlatSpec with Matchers {
     val runningVar: Tensor = ns.zerosLike(gamma.data)
 
     def fx(a: Variable): Variable = {
-      BatchNormFunctionChainRule(a,
+      ChainRuleBatchNormFunction(a,
                                  1e-5,
                                  0.9,
                                  runningMean,
@@ -198,7 +198,7 @@ class BatchNormSpec extends FlatSpec with Matchers {
     }
 
     def fg(a: Variable): Variable = {
-      BatchNormFunctionChainRule(x,
+      ChainRuleBatchNormFunction(x,
                                  1e-5,
                                  0.9,
                                  runningMean,
@@ -209,7 +209,7 @@ class BatchNormSpec extends FlatSpec with Matchers {
     }
 
     def fb(a: Variable): Variable = {
-      BatchNormFunctionChainRule(x,
+      ChainRuleBatchNormFunction(x,
                                  1e-5,
                                  0.9,
                                  runningMean,

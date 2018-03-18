@@ -33,43 +33,6 @@ object BatchNorm {
     BatchNorm(gamma, beta, eps, momentum)
   }
 
-  case class BatchNormFunctionChainRule(x: Variable,
-                                        eps: Double,
-                                        momentum: Double,
-                                        runningMean: Tensor,
-                                        runningVar: Tensor,
-                                        gamma: Variable,
-                                        beta: Variable,
-                                        inTrainingMode: Boolean)
-      extends Function {
-
-    import scorch._
-
-    override def forward(): Variable = {
-
-      if (inTrainingMode) {
-        val mu = x.mean(axis = 0)
-        val v = x.variance(axis = 0)
-
-        runningMean := (momentum * runningMean) + ((1.0 - momentum) * mu.data)
-        runningVar := (momentum * runningVar) + ((1.0 - momentum) * v.data)
-
-        val xMu = x - mu
-        val invVar = 1.0 / sqrt(v + eps)
-        val xHat = xMu * invVar
-        (gamma * xHat) + beta
-
-      } else {
-        val out = ((x.data - runningMean) / ns.sqrt(runningVar + eps)) * gamma.data + beta.data
-        Variable(out) // no need to backprop when in test mode
-      }
-    }
-
-    override def backward(gradOutput: Variable): Unit = {
-      x.backward(gradOutput)
-    }
-  }
-
   case class BatchNormFunction(x: Variable,
                                eps: Double,
                                momentum: Double,
@@ -118,6 +81,43 @@ object BatchNorm {
         (xHat * ns.sum(dxHat * xHat, axis = 0)))
 
       x.backward(Variable(dx))
+    }
+  }
+
+  case class ChainRuleBatchNormFunction(x: Variable,
+                                        eps: Double,
+                                        momentum: Double,
+                                        runningMean: Tensor,
+                                        runningVar: Tensor,
+                                        gamma: Variable,
+                                        beta: Variable,
+                                        inTrainingMode: Boolean)
+    extends Function {
+
+    import scorch._
+
+    override def forward(): Variable = {
+
+      if (inTrainingMode) {
+        val mu = x.mean(axis = 0)
+        val v = x.variance(axis = 0)
+
+        runningMean := (momentum * runningMean) + ((1.0 - momentum) * mu.data)
+        runningVar := (momentum * runningVar) + ((1.0 - momentum) * v.data)
+
+        val xMu = x - mu
+        val invVar = 1.0 / sqrt(v + eps)
+        val xHat = xMu * invVar
+        (gamma * xHat) + beta
+
+      } else {
+        val out = ((x.data - runningMean) / ns.sqrt(runningVar + eps)) * gamma.data + beta.data
+        Variable(out) // no need to backprop when in test mode
+      }
+    }
+
+    override def backward(gradOutput: Variable): Unit = {
+      x.backward(gradOutput)
     }
   }
 
