@@ -33,15 +33,14 @@ object BatchNorm {
     BatchNorm(gamma, beta, eps, momentum)
   }
 
-
-  case class BatchNormFunction(x: Variable,
-                               eps: Double,
-                               momentum: Double,
-                               runningMean: Tensor,
-                               runningVar: Tensor,
-                               gamma: Variable,
-                               beta: Variable,
-                               inTrainingMode: Boolean)
+  case class BatchNormFunctionChainRule(x: Variable,
+                                        eps: Double,
+                                        momentum: Double,
+                                        runningMean: Tensor,
+                                        runningVar: Tensor,
+                                        gamma: Variable,
+                                        beta: Variable,
+                                        inTrainingMode: Boolean)
       extends Function {
 
     import scorch._
@@ -49,26 +48,20 @@ object BatchNorm {
     override def forward(): Variable = {
 
       if (inTrainingMode) {
-        val mu = mean(x, axis = 0)
-        val v = variance(x, axis = 0)
+        val mu = x.mean(axis = 0)
+        val v = x.variance(axis = 0)
 
         runningMean := (momentum * runningMean) + ((1.0 - momentum) * mu.data)
-
-        println(runningVar.shape.toList)
-        println(x.shape)
-
         runningVar := (momentum * runningVar) + ((1.0 - momentum) * v.data)
-
 
         val xMu = x - mu
         val invVar = 1.0 / sqrt(v + eps)
         val xHat = xMu * invVar
         (gamma * xHat) + beta
 
-      }
-      else {
+      } else {
         val out = ((x.data - runningMean) / ns.sqrt(runningVar + eps)) * gamma.data + beta.data
-        Variable(out, gradFn = Some(this))
+        Variable(out) // no need to backprop when in test mode
       }
     }
 
@@ -77,7 +70,6 @@ object BatchNorm {
     }
   }
 
-  /*
   case class BatchNormFunction(x: Variable,
                                eps: Double,
                                momentum: Double,
@@ -94,14 +86,12 @@ object BatchNorm {
     // making them lazy, so they don't get evaluated in test phase
 
     // compute per-dimension mean and std deviation
-    val mean: Tensor = ns.mean(x.data, axis = 0)
-    val variance: Tensor = ns.variance(x.data, axis = 0)
-
+    lazy val mean: Tensor = ns.mean(x.data, axis = 0)
+    lazy val variance: Tensor = ns.variance(x.data, axis = 0)
     // normalize and zero-center (explicit for caching purposes)
-    val xMu: Tensor = x.data - mean
-    val invVar: Tensor = 1.0 / ns.sqrt(variance + eps)
-
-    val xHat: Tensor = xMu * invVar
+    lazy val xMu: Tensor = x.data - mean
+    lazy val invVar: Tensor = 1.0 / ns.sqrt(variance + eps)
+    lazy val xHat: Tensor = xMu * invVar
 
     override def forward(): Variable =
       if (inTrainingMode) {
@@ -113,7 +103,7 @@ object BatchNorm {
         Variable(out, gradFn = Some(this))
       } else {
         val out = ((x.data - runningMean) / ns.sqrt(runningVar + eps)) * gamma.data + beta.data
-        Variable(out, gradFn = Some(this))
+        Variable(out) // no need to backprop when in test mode
       }
 
     override def backward(gradOutput: Variable): Unit = {
@@ -130,6 +120,5 @@ object BatchNorm {
       x.backward(Variable(dx))
     }
   }
-  */
 
 }

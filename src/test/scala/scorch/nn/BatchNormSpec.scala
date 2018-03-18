@@ -7,7 +7,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
-import scorch.nn.BatchNorm.BatchNormFunction
+import scorch.nn.BatchNorm.{BatchNormFunction, BatchNormFunctionChainRule}
 import scorch.TestUtil._
 
 class BatchNormSpec extends FlatSpec with Matchers {
@@ -134,7 +134,6 @@ class BatchNormSpec extends FlatSpec with Matchers {
 
     val (n, d) = (4, 5)
     val x = Variable(5 * ns.randn(n, d) + 12)
-
     val gamma = Variable(ns.randn(1, d))
     val beta = Variable(ns.randn(1, d))
     val runningMean: Tensor = ns.zerosLike(gamma.data)
@@ -142,18 +141,14 @@ class BatchNormSpec extends FlatSpec with Matchers {
 
     def fx(a: Variable): Variable = {
       BatchNormFunction(a,
-                        1e-4,
+                        1e-5,
                         0.9,
-                        // 0.0,
-                        // 1.0,
                         runningMean,
                         runningVar,
                         gamma,
                         beta,
                         inTrainingMode = true).forward()
     }
-
-    oneOpGradientCheck(fx, x.copy())
 
     def fg(a: Variable): Variable = {
       BatchNormFunction(x,
@@ -177,6 +172,54 @@ class BatchNormSpec extends FlatSpec with Matchers {
                         inTrainingMode = true).forward()
     }
 
+    oneOpGradientCheck(fx, x)
+    oneOpGradientCheck(fg, gamma.copy())
+    oneOpGradientCheck(fb, beta.copy())
+  }
+
+  it should "calculate gradients using the chain rule" in {
+
+    val (n, d) = (4, 5)
+    val x = Variable(5 * ns.randn(n, d) + 12)
+    val gamma = Variable(ns.randn(1, d))
+    val beta = Variable(ns.randn(1, d))
+    val runningMean: Tensor = ns.zerosLike(gamma.data)
+    val runningVar: Tensor = ns.zerosLike(gamma.data)
+
+    def fx(a: Variable): Variable = {
+      BatchNormFunctionChainRule(a,
+                                 1e-5,
+                                 0.9,
+                                 runningMean,
+                                 runningVar,
+                                 gamma,
+                                 beta,
+                                 inTrainingMode = true).forward()
+    }
+
+    def fg(a: Variable): Variable = {
+      BatchNormFunctionChainRule(x,
+                                 1e-5,
+                                 0.9,
+                                 runningMean,
+                                 runningVar,
+                                 a,
+                                 beta,
+                                 inTrainingMode = true).forward()
+    }
+
+    def fb(a: Variable): Variable = {
+      BatchNormFunctionChainRule(x,
+                                 1e-5,
+                                 0.9,
+                                 runningMean,
+                                 runningVar,
+                                 gamma,
+                                 a,
+                                 inTrainingMode = true).forward()
+    }
+
+    oneOpGradientCheck(fx, x)
     oneOpGradientCheck(fg, gamma.copy())
     oneOpGradientCheck(fb, beta.copy())
   }

@@ -122,7 +122,7 @@ class FunctionGradientSpec
   }
 
   "Sqrt" should "calculate gradients" in {
-    val a = Variable(ns.randn(4, 6))
+    val a = Variable(ns.abs(ns.randn(4, 6)))
     def f(a: Variable): Variable = Sqrt(a).forward()
     oneOpGradientCheck(f, a)
   }

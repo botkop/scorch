@@ -156,7 +156,6 @@ case class Sqrt(v: Variable) extends Function {
 case class Abs(v: Variable) extends Function {
   val cache: Tensor = ns.abs(v.data)
   override def forward(): Variable = Variable(cache, Some(this))
-
   override def backward(gradOutput: Variable): Unit = {
     val dv = (v.data / cache) * gradOutput.data
     v.backward(Variable(dv))
@@ -180,10 +179,6 @@ case class Dot(v1: Variable, v2: Variable) extends Function {
     val dd = gradOutput.data
     val dw = dd dot x.T
     val dx = w.T dot dd
-
-    logger.debug(
-      s"dot backward, dw.shape=${dw.shape.toList}, dx.shape=${dx.shape.toList}")
-
     v1.backward(Variable(dw))
     v2.backward(Variable(dx))
   }
@@ -286,13 +281,13 @@ case class MeanByAxis(v: Variable, axis: Int) extends Function {
 }
 
 case class Variance(v: Variable) extends Function {
-  override def forward(): Variable = (v - v.mean()) ** 2
+  override def forward(): Variable = ((v - v.mean()) ** 2).mean()
   override def backward(gradOutput: Variable): Unit =
     v.backward(gradOutput)
 }
 
 case class VarianceByAxis(v: Variable, axis: Int) extends Function {
-  override def forward(): Variable = (v - v.mean(axis)) ** 2
+  override def forward(): Variable = ((v - v.mean(axis)) ** 2).mean(axis)
   override def backward(gradOutput: Variable): Unit =
     v.backward(gradOutput)
 }
@@ -310,7 +305,6 @@ case class Max(x: Variable, y: Variable) extends Function {
 
 case class Threshold(x: Variable, d: Double) extends Function {
   override def forward(): Variable = Variable(ns.maximum(x.data, d), Some(this))
-
   override def backward(gradOutput: Variable): Unit = {
     x.backward(Variable(gradOutput.data * (x.data > d)))
   }
