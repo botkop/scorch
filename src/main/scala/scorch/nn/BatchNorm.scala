@@ -92,12 +92,11 @@ object BatchNorm {
                                         gamma: Variable,
                                         beta: Variable,
                                         inTrainingMode: Boolean)
-    extends Function {
+      extends Function {
 
     import scorch._
 
-    override def forward(): Variable = {
-
+    override def forward(): Variable =
       if (inTrainingMode) {
         val mu = x.mean(axis = 0)
         val v = x.variance(axis = 0)
@@ -114,7 +113,6 @@ object BatchNorm {
         val out = ((x.data - runningMean) / ns.sqrt(runningVar + eps)) * gamma.data + beta.data
         Variable(out) // no need to backprop when in test mode
       }
-    }
 
     override def backward(gradOutput: Variable): Unit = {
       x.backward(gradOutput)
