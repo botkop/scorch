@@ -128,7 +128,7 @@ object TestUtil extends LazyLogging {
     assert(daError < 1e-5)
   }
 
-  def oneOpGradientCheck(f: (Variable) => Variable, a: Variable): Unit = {
+  def oneOpGradientCheck(f: (Variable) => Variable, a: Variable, errorBound: Double = 1e-8): Unit = {
 
     val out = f(a)
     logger.debug(s"out = $out")
@@ -149,7 +149,7 @@ object TestUtil extends LazyLogging {
     val daError = relError(da, daNum)
     logger.debug(s"daError = $daError")
 
-    assert(daError < 1e-5)
+    assert(daError < errorBound)
   }
 
 }

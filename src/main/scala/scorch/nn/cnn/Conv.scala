@@ -18,6 +18,18 @@ case class Conv(w: Variable, b: Variable, stride: Int, pad: Int)
 
 object Conv {
 
+  def apply(numChannels: Int,
+            numFilters: Int,
+            filterSize: Int,
+            weightScale: Double,
+            stride: Int,
+            pad: Int): Conv = {
+    val w = Variable(
+      weightScale * ns.randn(numFilters, numChannels, filterSize, filterSize))
+    val b = Variable(ns.zeros(numFilters))
+    Conv(w, b, stride, pad)
+  }
+
   case class NaiveConvFunction(x: Variable,
                                w: Variable,
                                b: Variable,
@@ -61,9 +73,9 @@ object Conv {
 
       val dOut = gradOutput.data
 
-      val dx = ns.zerosLike(x.data)
-      val dw = ns.zerosLike(w.data)
-      val db = ns.zerosLike(b.data)
+      val dx = x.grad.data
+      val dw = w.grad.data
+      val db = b.grad.data
 
       for (n <- 0 until numDataPoints) {
         val dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
@@ -84,10 +96,6 @@ object Conv {
         }
         dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
       }
-
-      x.grad.data := dx
-      w.grad.data := dw
-      b.grad.data := db
     }
   }
 }

@@ -35,7 +35,6 @@ class ConvSpec extends FlatSpec with Matchers {
       .reshape(2, 3, 2, 2)
 
     val error = scorch.TestUtil.relError(out.data, correctOut)
-
     error should be < 3e-8
   }
 
@@ -51,8 +50,8 @@ class ConvSpec extends FlatSpec with Matchers {
     def fb(a: Variable) = Conv.NaiveConvFunction(x, w, a, stride, pad).forward()
 
     oneOpGradientCheck(fx, x)
-    oneOpGradientCheck(fw, w)
-    oneOpGradientCheck(fb, b)
+    oneOpGradientCheck(fw, w.copy())
+    oneOpGradientCheck(fb, b.copy())
 
   }
 }
