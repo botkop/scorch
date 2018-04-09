@@ -264,7 +264,7 @@ class BatchNormSpec extends FlatSpec with Matchers {
     println(t5 - t4)
 
     val fwdSpeedup = (t6.toDouble - t5) / (t5.toDouble - t4)
-    println(s"explicit forward batch norm function is $fwdSpeedup times faster than with chain rule")
+    println(s"explicit forward batch norm is $fwdSpeedup times faster than chain rule")
 
     val yHatError = relError(yHat1.data, yHat2.data)
     println(yHatError)
@@ -279,15 +279,14 @@ class BatchNormSpec extends FlatSpec with Matchers {
     // error of gradients should be very small
     val dyError = relError(x1.grad.data, x2.grad.data)
     println(dyError)
-    dyError should be < 1e-12
+    dyError should be < 1e-11
 
 
     println(t3 - t2)
     println(t2 - t1)
 
     val speedup = (t3.toDouble - t2) / (t2.toDouble - t1)
-    println(s"explicit backward batch norm function is $speedup times faster than with chain rule")
-
+    println(s"explicit backward batch norm is $speedup times faster than chain rule")
   }
 
 }

@@ -1,12 +1,14 @@
 package scorch.nn.rnn
 
+import botkop.{numsca => ns}
+
 import scorch.autograd.Variable
 import scorch.nn._
 
 import scala.annotation.tailrec
 
 /**
-  * Wrapper around an Rnn cell to facilitate froward propagation through a fixed sequence (training)
+  * Wrapper around an Rnn cell to facilitate forward propagation through a fixed sequence (training)
   * and sampling of results.
   * @param cell the cell base underlying this Rnn
   */
@@ -39,8 +41,6 @@ case class RnnBase(cell: RnnCellBase) extends Module[Seq](cell.parameters) {
              bosIndex: Int,
              eosIndex: Int,
              maxSentenceSize: Int): Seq[Int] = {
-
-    import botkop.{numsca => ns}
 
     /**
       * Reuse the previously generated symbol and hidden state to generate the next symbol
@@ -87,7 +87,6 @@ case class RnnBase(cell: RnnCellBase) extends Module[Seq](cell.parameters) {
 
     generateSequence()
   }
-
 }
 
 object RnnBase {
