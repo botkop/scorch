@@ -30,9 +30,11 @@ object MaxPooling {
       for {
         n <- 0 until numDataPoints
         c <- 0 until numChannels
+
         h <- 0 until hPrime
         h1 = h * stride
         h2 = h1 + poolHeight
+
         w <- 0 until wPrime
         w1 = w * stride
         w2 = w1 + poolWidth
@@ -53,9 +55,11 @@ object MaxPooling {
       for {
         n <- 0 until numDataPoints
         c <- 0 until numChannels
+
         h <- 0 until hPrime
         h1 = h * stride
         h2 = h1 + poolHeight
+
         w <- 0 until wPrime
         w1 = w * stride
         w2 = w1 + poolWidth

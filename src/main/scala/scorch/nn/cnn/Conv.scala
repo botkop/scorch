@@ -13,7 +13,6 @@ case class Conv(w: Variable, b: Variable, stride: Int, pad: Int)
 
   override def forward(x: Variable): Variable =
     NaiveConvFunction(x, w, b, stride, pad).forward()
-
 }
 
 object Conv {
@@ -48,24 +47,26 @@ object Conv {
 
       val out = ns.zeros(numDataPoints, numFilters, hPrime, wPrime)
 
-      for (n <- 0 until numDataPoints) {
+      for {
+        n <- 0 until numDataPoints
+        xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
 
-        val xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
+        f <- 0 until numFilters
+        wf = w.data(f)
+        bf = b.data(f)
 
-        for (f <- 0 until numFilters) {
-          for (hp <- 0 until hPrime) {
-            for (wp <- 0 until wPrime) {
-              val h1 = hp * stride
-              val h2 = h1 + hh
-              val w1 = wp * stride
-              val w2 = w1 + ww
-              val window = xPad(:>, h1 :> h2, w1 :> w2)
+        hp <- 0 until hPrime
+        h1 = hp * stride
+        h2 = h1 + hh
 
-              out(n, f, hp, wp) := ns.sum(window * w.data(f)) + b.data(f)
-            }
-          }
-        }
+        wp <- 0 until wPrime
+        w1 = wp * stride
+        w2 = w1 + ww
+      } {
+        val window = xPad(:>, h1 :> h2, w1 :> w2)
+        out(n, f, hp, wp) := ns.sum(window * wf) + bf
       }
+
       Variable(out, Some(this))
     }
 
@@ -77,25 +78,29 @@ object Conv {
       val dw = w.grad.data
       val db = b.grad.data
 
-      for (n <- 0 until numDataPoints) {
-        val dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
-        val xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
-        for (f <- 0 until numFilters) {
-          for (hp <- 0 until hPrime) {
-            for (wp <- 0 until wPrime) {
-              val h1 = hp * stride
-              val h2 = h1 + hh
-              val w1 = wp * stride
-              val w2 = w1 + ww
-              val d = dOut(n, f, hp, wp)
-              dxPad(:>, h1 :> h2, w1 :> w2) += w.data(f) * d
-              dw(f) += xPad(:>, h1 :> h2, w1 :> w2) * d
-              db(f) += d
-            }
-          }
-        }
+      for {
+        n <- 0 until numDataPoints
+        dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
+        xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
+
+        f <- 0 until numFilters
+        wf = w.data(f)
+
+        hp <- 0 until hPrime
+        h1 = hp * stride
+        h2 = h1 + hh
+
+        wp <- 0 until wPrime
+        w1 = wp * stride
+        w2 = w1 + ww
+      } {
+        val d = dOut(n, f, hp, wp)
+        dxPad(:>, h1 :> h2, w1 :> w2) += wf * d
+        dw(f) += xPad(:>, h1 :> h2, w1 :> w2) * d
+        db(f) += d
         dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
       }
+
     }
   }
 }
