@@ -3,6 +3,7 @@ package scorch.autograd
 import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
+import scorch.nn.cnn.MaxPooling
 
 object Variable {
   def apply(d: Double): Variable = Variable(Tensor(d))
@@ -65,5 +66,8 @@ case class Variable(data: Tensor,
 
   def cat(w: Variable, axis: Int = 0): Variable =
     Concat(this, w, axis).forward()
+
+  def maxPool(poolHeight: Int, poolWidth: Int, stride: Int): Variable =
+    MaxPooling.NaiveMaxPoolingFunction(this, poolHeight, poolWidth, stride).forward()
 
 }

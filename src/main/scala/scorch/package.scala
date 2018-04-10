@@ -21,6 +21,14 @@ package object scorch {
   def variance(v: Variable): Variable = v.variance()
   def variance(v: Variable, axis: Int): Variable = v.variance(axis)
 
+  def maxPool(v: Variable,
+              poolHeight: Int,
+              poolWidth: Int,
+              stride: Int): Variable =
+    v.maxPool(poolHeight, poolWidth, stride)
+  def maxPool(v: Variable, poolSize: Int, stride: Int): Variable =
+    v.maxPool(poolSize, poolSize, stride)
+
   // multi parameter functions
   def cat(v: Variable, w: Variable, axis: Int = 0): Variable =
     Concat(v, w, axis).forward()
@@ -28,6 +36,7 @@ package object scorch {
   // loss functions
   def softmaxLoss(x: Variable, y: Variable): Variable =
     SoftmaxLoss(x, y).forward()
+
   /**
     * Instantiates a CrossEntropyLoss object, and applies it
     * @param actuals source for the loss function

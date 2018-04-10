@@ -6,6 +6,9 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
+import scorch.nn.Infer.Id
+import scorch.nn.{BaseModule, Linear, Module}
+import scorch.optim.SGD
 
 class ConvSpec extends FlatSpec with Matchers {
 
@@ -52,6 +55,116 @@ class ConvSpec extends FlatSpec with Matchers {
     oneOpGradientCheck(fx, x)
     oneOpGradientCheck(fw, w.copy())
     oneOpGradientCheck(fb, b.copy())
+  }
 
+  "A Conv net" should "calculate gradients" in {
+
+    import scorch._
+
+    val weightScale = 1
+    val numDataPoints = 2
+    val numChannels = 3
+    val imageHeight = 8
+    val imageWidth = 8
+    val numFilters = 3
+    val filterSize = 3
+    val stride = 1
+    val pad = 1
+
+    val poolSize = 2
+    val poolStride = 2
+
+    case class ConvReluPool() extends Module {
+      val conv = nn.cnn.Conv(numChannels,
+                             numFilters,
+                             filterSize,
+                             weightScale,
+                             stride,
+                             pad)
+      override def subModules = Seq(conv)
+      def pool(v: Variable): Variable = maxPool(v, poolSize, poolStride)
+
+      override def forward(x: Variable): Variable = pool(relu(conv(x)))
+    }
+
+    val net = ConvReluPool()
+
+    val x =
+      Variable(ns.randn(numDataPoints, numChannels, imageHeight, imageWidth))
+    def fx(a: Variable) = net(a)
+    oneOpGradientCheck(fx, x, 1e-5)
+  }
+
+  it should "handle a 3 layer network" in {
+
+    import scorch._
+
+    val weightScale = 1e-3
+    val numSamples = 10
+
+    val numChannels = 3
+    val imageHeight = 32
+    val imageWidth = 32
+    val numFilters = 32
+    val filterSize = 7
+    val stride = 1
+    val pad = 1
+
+    val poolSize = 2
+    val poolStride = 2
+
+    val hiddenDim = 100
+
+    val numClasses = 10
+
+    Nd4j.setDataType(DataBuffer.Type.FLOAT)
+
+    case class ThreeLayerNetwork() extends Module {
+
+      val conv = nn.cnn.Conv(numChannels,
+                             numFilters,
+                             filterSize,
+                             weightScale,
+                             stride,
+                             pad)
+
+      def pool(v: Variable): Variable = maxPool(v, poolSize, poolStride)
+
+      val fc1 = Linear(6272, hiddenDim)
+      val fc2 = Linear(hiddenDim, numClasses)
+
+      override def forward(x: Variable): Variable = {
+        val r0 = conv(x)
+        val r1 = relu(r0)
+        val r2 = pool(r1)
+        val r21 = r2.reshape(numSamples, 6272)
+        val r3 = fc1(r21)
+        val r4 = relu(r3)
+        val r5 = fc2(r4)
+        r5
+      }
+
+      override def subModules = Seq(conv, fc1, fc2)
+    }
+
+    val n = ThreeLayerNetwork()
+    val optimizer = SGD(n.parameters, lr = 0.001)
+    val input =
+      Variable(ns.randn(numSamples, numChannels, imageHeight, imageWidth))
+    val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+
+    for (j <- 0 to 3) {
+      optimizer.zeroGrad()
+
+      val output = n(input)
+      val loss = softmaxLoss(output, target)
+
+      val guessed = ns.argmax(output.data, axis = 1)
+      val accuracy = ns.sum(target.data == guessed) / numSamples
+      println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+
+      loss.backward()
+      optimizer.step()
+    }
   }
 }

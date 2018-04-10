@@ -6,7 +6,8 @@ import scorch.autograd.{Function, Variable}
 import scorch.nn.Module
 import scorch.nn.cnn.MaxPooling.NaiveMaxPoolingFunction
 
-class MaxPooling(poolHeight: Int, poolWidth: Int, stride: Int) extends Module {
+// does not have learnable parameters, so probably not a module
+case class MaxPooling(poolHeight: Int, poolWidth: Int, stride: Int) extends Module {
   override def forward(x: Variable): Variable =
     NaiveMaxPoolingFunction(x, poolHeight, poolWidth, stride).forward()
 }
@@ -49,7 +50,7 @@ object MaxPooling {
     }
 
     override def backward(gradOutput: Variable): Unit = {
-      val dx = x.grad.data
+      val dx = ns.zerosLike(x.data)
       val dOut = gradOutput.data
 
       for {
@@ -70,6 +71,8 @@ object MaxPooling {
         val upd = (window == ns.max(window)) * dOut(n, c, h, w)
         dx(n, c, h1 :> h2, w1 :> w2) := upd
       }
+
+      x.backward(Variable(dx))
     }
 
   }

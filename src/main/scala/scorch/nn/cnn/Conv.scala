@@ -74,9 +74,9 @@ object Conv {
 
       val dOut = gradOutput.data
 
-      val dx = x.grad.data
-      val dw = w.grad.data
-      val db = b.grad.data
+      val dx = zerosLike(x.data)
+      val dw = zerosLike(w.data)
+      val db = zerosLike(b.data)
 
       for {
         n <- 0 until numDataPoints
@@ -101,6 +101,9 @@ object Conv {
         dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
       }
 
+      x.backward(Variable(dx))
+      w.backward(Variable(dw))
+      b.backward(Variable(db))
     }
   }
 }
