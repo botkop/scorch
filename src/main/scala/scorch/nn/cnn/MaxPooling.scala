@@ -7,12 +7,30 @@ import scorch.nn.Module
 import scorch.nn.cnn.MaxPooling.NaiveMaxPoolingFunction
 
 // does not have learnable parameters, so probably not a module
-case class MaxPooling(poolHeight: Int, poolWidth: Int, stride: Int) extends Module {
+case class MaxPooling(poolHeight: Int, poolWidth: Int, stride: Int)
+    extends Module {
+
+  def outputShape(inputShape: List[Int]): List[Int] =
+    MaxPooling.outputShape(inputShape, poolHeight, poolWidth, stride)
+
   override def forward(x: Variable): Variable =
     NaiveMaxPoolingFunction(x, poolHeight, poolWidth, stride).forward()
 }
 
 object MaxPooling {
+
+  def apply(poolSize: Int, stride: Int): MaxPooling =
+    MaxPooling(poolSize, poolSize, stride)
+
+  def outputShape(inputShape: List[Int],
+                  poolHeight: Int,
+                  poolWidth: Int,
+                  stride: Int): List[Int] = {
+    val List(numDataPoints, numChannels, height, width) = inputShape
+    val hPrime: Int = 1 + (height - poolHeight) / stride
+    val wPrime: Int = 1 + (width - poolWidth) / stride
+    List(numDataPoints, numChannels, hPrime, wPrime)
+  }
 
   case class NaiveMaxPoolingFunction(x: Variable,
                                      poolHeight: Int,
@@ -20,9 +38,13 @@ object MaxPooling {
                                      stride: Int)
       extends Function {
 
+    /*
     val List(numDataPoints, numChannels, height, width) = x.shape
     val hPrime: Int = 1 + (height - poolHeight) / stride
     val wPrime: Int = 1 + (width - poolWidth) / stride
+     */
+    val List(numDataPoints, numChannels, hPrime, wPrime) =
+      outputShape(x.shape, poolHeight, poolWidth, stride)
 
     override def forward(): Variable = {
 

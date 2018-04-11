@@ -11,6 +11,9 @@ case class Conv(w: Variable, b: Variable, stride: Int, pad: Int)
 
   import Conv._
 
+  def outputShape(inputShape: List[Int], pad: Int, stride: Int): List[Int] =
+    Conv.outputShape(inputShape, w.shape, pad, stride)
+
   override def forward(x: Variable): Variable =
     NaiveConvFunction(x, w, b, stride, pad).forward()
 }
@@ -29,6 +32,17 @@ object Conv {
     Conv(w, b, stride, pad)
   }
 
+  def outputShape(xShape: List[Int],
+                  wShape: List[Int],
+                  pad: Int,
+                  stride: Int): List[Int] = {
+    val List(numFilters, _, hh, ww) = wShape
+    val List(numSamples, _, height, width) = xShape
+    val hPrime: Int = 1 + (height + 2 * pad - hh) / stride
+    val wPrime: Int = 1 + (width + 2 * pad - ww) / stride
+    List(numSamples, numFilters, hPrime, wPrime)
+  }
+
   case class NaiveConvFunction(x: Variable,
                                w: Variable,
                                b: Variable,
@@ -36,10 +50,16 @@ object Conv {
                                pad: Int)
       extends Function {
 
+    /*
     val List(numFilters, numChannels, hh, ww) = w.shape
     val List(numDataPoints, _, height, width) = x.shape
     val hPrime: Int = 1 + (height + 2 * pad - hh) / stride
     val wPrime: Int = 1 + (width + 2 * pad - ww) / stride
+     */
+
+    val List(numDataPoints, numFilters, hPrime, wPrime) =
+      outputShape(x.shape, w.shape, pad, stride)
+    val List(hh, ww) = w.shape.takeRight(2)
 
     val padArea = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
 

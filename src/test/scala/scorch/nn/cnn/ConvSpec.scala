@@ -117,6 +117,8 @@ class ConvSpec extends FlatSpec with Matchers {
 
     val numClasses = 10
 
+    val inputShape = List(numSamples, numChannels, imageHeight, imageWidth)
+
     Nd4j.setDataType(DataBuffer.Type.FLOAT)
 
     case class ThreeLayerNetwork() extends Module {
@@ -128,16 +130,20 @@ class ConvSpec extends FlatSpec with Matchers {
                              stride,
                              pad)
 
-      def pool(v: Variable): Variable = maxPool(v, poolSize, poolStride)
+      val pool = nn.cnn.MaxPooling(poolSize, poolStride)
 
-      val fc1 = Linear(6272, hiddenDim)
+      val convOutShape: List[Int] = conv.outputShape(inputShape, pad, stride)
+      val poolOutSize: List[Int] = pool.outputShape(convOutShape)
+      val flatPoolSize: Int = poolOutSize.tail.product
+
+      val fc1 = Linear(flatPoolSize, hiddenDim)
       val fc2 = Linear(hiddenDim, numClasses)
 
       override def forward(x: Variable): Variable = {
         val r0 = conv(x)
         val r1 = relu(r0)
         val r2 = pool(r1)
-        val r21 = r2.reshape(numSamples, 6272)
+        val r21 = r2.reshape(numSamples, flatPoolSize)
         val r3 = fc1(r21)
         val r4 = relu(r3)
         val r5 = fc2(r4)
@@ -149,8 +155,7 @@ class ConvSpec extends FlatSpec with Matchers {
 
     val n = ThreeLayerNetwork()
     val optimizer = SGD(n.parameters, lr = 0.001)
-    val input =
-      Variable(ns.randn(numSamples, numChannels, imageHeight, imageWidth))
+    val input = Variable(ns.randn(inputShape: _*))
     val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
 
     for (j <- 0 to 3) {
