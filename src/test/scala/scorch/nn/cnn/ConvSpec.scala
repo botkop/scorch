@@ -6,8 +6,7 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
-import scorch.nn.Infer.Id
-import scorch.nn.{BaseModule, Linear, Module}
+import scorch.nn.{Linear, Module}
 import scorch.optim.SGD
 
 class ConvSpec extends FlatSpec with Matchers {
