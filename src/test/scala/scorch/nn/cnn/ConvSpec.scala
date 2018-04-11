@@ -138,15 +138,20 @@ class ConvSpec extends FlatSpec with Matchers {
       val fc1 = Linear(flatPoolSize, hiddenDim)
       val fc2 = Linear(hiddenDim, numClasses)
 
+      def view(v: Variable): Variable = v.reshape(numSamples, flatPoolSize)
+
       override def forward(x: Variable): Variable = {
-        val r0 = conv(x)
-        val r1 = relu(r0)
-        val r2 = pool(r1)
-        val r21 = r2.reshape(numSamples, flatPoolSize)
-        val r3 = fc1(r21)
-        val r4 = relu(r3)
-        val r5 = fc2(r4)
-        r5
+
+        conv(x) ~> relu ~> pool ~> view ~> fc1.apply ~> fc2.apply
+
+//        val r0 = conv(x)
+//        val r1 = relu(r0)
+//        val r2 = pool(r1)
+//        val r21 = r2.reshape(numSamples, flatPoolSize)
+//        val r3 = fc1(r21)
+//        val r4 = relu(r3)
+//        val r5 = fc2(r4)
+//        r5
       }
 
       override def subModules = Seq(conv, fc1, fc2)

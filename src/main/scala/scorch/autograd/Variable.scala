@@ -3,6 +3,8 @@ package scorch.autograd
 import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
+import scorch.nn.Infer.Id
+import scorch.nn.Module
 import scorch.nn.cnn.MaxPooling
 
 object Variable {
@@ -15,6 +17,10 @@ case class Variable(data: Tensor,
                     gradFn: Option[Function] = None,
                     name: Option[String] = None)
     extends LazyLogging {
+
+  def ~>(f: (Variable) => Variable ): Variable = f(this)
+
+  def ~>(m: Module[Id[Variable]]): Variable = m.apply(this)
 
   override def toString: String =
     if (name.isDefined) s"name: ${name.get}, data: $data" else s"data: $data"
