@@ -142,7 +142,7 @@ class ConvSpec extends FlatSpec with Matchers {
 
       override def forward(x: Variable): Variable = {
 
-        conv(x) ~> relu ~> pool ~> view ~> fc1.apply ~> fc2.apply
+        conv(x) ~> relu ~> pool.apply ~> view ~> fc1.apply ~> fc2.apply
 
 //        val r0 = conv(x)
 //        val r1 = relu(r0)

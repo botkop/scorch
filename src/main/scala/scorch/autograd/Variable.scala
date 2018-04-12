@@ -20,7 +20,7 @@ case class Variable(data: Tensor,
 
   def ~>(f: (Variable) => Variable ): Variable = f(this)
 
-  def ~>(m: Module[Id[Variable]]): Variable = m.apply(this)
+  // def ~>(m: Module[Id[Variable]]): Variable = m.apply(this)
 
   override def toString: String =
     if (name.isDefined) s"name: ${name.get}, data: $data" else s"data: $data"
