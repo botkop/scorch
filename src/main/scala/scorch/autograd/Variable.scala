@@ -1,26 +1,28 @@
 package scorch.autograd
 
-import botkop.{numsca => ns}
 import botkop.numsca.Tensor
+import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
 import scorch.nn.Infer.Id
 import scorch.nn.Module
 import scorch.nn.cnn.MaxPooling
 
+import scala.language.implicitConversions
+
 object Variable {
   def apply(d: Double): Variable = Variable(Tensor(d))
   def apply(d: Double, name: Option[String]): Variable =
     Variable(Tensor(d), name = name)
+
+  implicit def moduleApply[T <: Module[Id]](m: T): (Variable) => Variable =
+    m.forward
+
 }
 
 case class Variable(data: Tensor,
                     gradFn: Option[Function] = None,
                     name: Option[String] = None)
     extends LazyLogging {
-
-  def ~>(f: (Variable) => Variable ): Variable = f(this)
-
-  // def ~>(m: Module[Id[Variable]]): Variable = m.apply(this)
 
   override def toString: String =
     if (name.isDefined) s"name: ${name.get}, data: $data" else s"data: $data"
@@ -74,6 +76,11 @@ case class Variable(data: Tensor,
     Concat(this, w, axis).forward()
 
   def maxPool(poolHeight: Int, poolWidth: Int, stride: Int): Variable =
-    MaxPooling.NaiveMaxPoolingFunction(this, poolHeight, poolWidth, stride).forward()
+    MaxPooling
+      .NaiveMaxPoolingFunction(this, poolHeight, poolWidth, stride)
+      .forward()
+
+  // chain operator, for chaining operations
+  def ~>(f: (Variable) => Variable): Variable = f(this)
 
 }

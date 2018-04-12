@@ -6,8 +6,11 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
+import scorch.nn.Infer.Id
 import scorch.nn.{Linear, Module}
 import scorch.optim.SGD
+
+import scala.language.implicitConversions
 
 class ConvSpec extends FlatSpec with Matchers {
 
@@ -133,39 +136,29 @@ class ConvSpec extends FlatSpec with Matchers {
 
       val convOutShape: List[Int] = conv.outputShape(inputShape, pad, stride)
       val poolOutSize: List[Int] = pool.outputShape(convOutShape)
-      val flatPoolSize: Int = poolOutSize.tail.product
+      val numFlatFeatures: Int = poolOutSize.tail.product
 
-      val fc1 = Linear(flatPoolSize, hiddenDim)
+      val fc1 = Linear(numFlatFeatures, hiddenDim)
       val fc2 = Linear(hiddenDim, numClasses)
 
-      def view(v: Variable): Variable = v.reshape(numSamples, flatPoolSize)
+      def flatten(v: Variable): Variable =
+        v.reshape(numSamples, numFlatFeatures)
 
-      override def forward(x: Variable): Variable = {
-
-        conv(x) ~> relu ~> pool.apply ~> view ~> fc1.apply ~> fc2.apply
-
-//        val r0 = conv(x)
-//        val r1 = relu(r0)
-//        val r2 = pool(r1)
-//        val r21 = r2.reshape(numSamples, flatPoolSize)
-//        val r3 = fc1(r21)
-//        val r4 = relu(r3)
-//        val r5 = fc2(r4)
-//        r5
-      }
+      override def forward(x: Variable): Variable =
+        x ~> conv ~> relu ~> pool ~> flatten ~> fc1 ~> fc2
 
       override def subModules = Seq(conv, fc1, fc2)
     }
 
-    val n = ThreeLayerNetwork()
-    val optimizer = SGD(n.parameters, lr = 0.001)
+    val net = ThreeLayerNetwork()
+    val optimizer = SGD(net.parameters, lr = 0.001)
     val input = Variable(ns.randn(inputShape: _*))
     val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
 
     for (j <- 0 to 3) {
       optimizer.zeroGrad()
 
-      val output = n(input)
+      val output = net(input)
       val loss = softmaxLoss(output, target)
 
       val guessed = ns.argmax(output.data, axis = 1)

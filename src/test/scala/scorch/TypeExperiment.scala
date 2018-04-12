@@ -1,12 +1,26 @@
 package scorch
 
 import botkop.numsca.Tensor
+import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd.Variable
 
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
 // case class Parameter(i: Int)
+
+class TypeExperiment extends FlatSpec with Matchers {
+
+  "experiment with type inference" should "" in {
+
+    abstract class A()
+
+
+
+
+  }
+
+}
 
 
 object TypeExperiment extends App {

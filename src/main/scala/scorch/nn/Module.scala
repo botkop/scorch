@@ -2,7 +2,7 @@ package scorch.nn
 
 import scorch.autograd.Variable
 
-import scala.language.higherKinds
+import scala.language.{higherKinds, implicitConversions}
 
 sealed trait Infer[F[_]]
 trait LowPriority {
