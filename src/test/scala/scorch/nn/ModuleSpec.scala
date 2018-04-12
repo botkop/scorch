@@ -67,7 +67,6 @@ class ModuleSpec extends FlatSpec with Matchers {
     case class Net() extends Module {
       val fc1 = Linear(nf1, nf2)
       val fc2 = Linear(nf2, numClasses)
-      override def subModules = Seq(fc1, fc2)
       override def forward(x: Variable) = fc2(relu(fc1(x)))
     }
 
@@ -115,8 +114,6 @@ class ModuleSpec extends FlatSpec with Matchers {
       // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
       override def forward(x: Variable) = fc2(relu(fc1(x)))
 
-      // register the submodules to allow the world to know what this net is composed of
-      override def subModules = Seq(fc1, fc2)
     }
 
     // instantiate

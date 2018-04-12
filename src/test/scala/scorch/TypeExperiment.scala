@@ -7,21 +7,42 @@ import scorch.autograd.Variable
 import scala.reflect.runtime.universe
 import scala.reflect.runtime.universe._
 
-// case class Parameter(i: Int)
+abstract class AbstractModule
+case class Zap() extends AbstractModule
 
 class TypeExperiment extends FlatSpec with Matchers {
 
-  "experiment with type inference" should "" in {
+  "A Zoop" should "find Zaps" in {
 
-    abstract class A()
+    abstract class Zoop() {
+      def zaps: List[AbstractModule] = {
+        this.getClass.getDeclaredFields.toList.flatMap { f =>
+          f setAccessible true
+          val v: AnyRef = f.get(this)
+          println(v.getClass.getName)
+          println(v.isInstanceOf[AbstractModule])
+          v match {
+            case module: AbstractModule => Some(module)
+            case _                      => None
+          }
 
+        }
+      }
+    }
 
+    case class A(x: AbstractModule) extends Zoop {
+      val a = Zap()
+      val b = Zap()
+    }
 
+    val x = Zap()
+    val za = A(x)
+    val zaps = za.zaps
+    println(zaps)
 
   }
 
 }
-
 
 object TypeExperiment extends App {
 
@@ -30,19 +51,19 @@ object TypeExperiment extends App {
   abstract class AbstractModule(localParameters: Seq[Parameter] = Nil) {
     def parameters: Unit = {
       this.getClass.getDeclaredFields.toSeq.foreach { f =>
-
         println(f.getType)
 
         f setAccessible true
         f.get(this) match {
-          case p @ TypeRef(a: universe.Type, sym: universe.Symbol, args: List[universe.Type]) =>
+          case p @ TypeRef(a: universe.Type,
+                           sym: universe.Symbol,
+                           args: List[universe.Type]) =>
             println(a)
             println(sym)
-
             Some(p)
-          case _            => None
+          case _ => None
         }
-        // ???
+      // ???
       }
     }
   }

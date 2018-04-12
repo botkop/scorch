@@ -50,13 +50,6 @@ object Conv {
                                pad: Int)
       extends Function {
 
-    /*
-    val List(numFilters, numChannels, hh, ww) = w.shape
-    val List(numDataPoints, _, height, width) = x.shape
-    val hPrime: Int = 1 + (height + 2 * pad - hh) / stride
-    val wPrime: Int = 1 + (width + 2 * pad - ww) / stride
-     */
-
     val List(numDataPoints, numFilters, hPrime, wPrime) =
       outputShape(x.shape, w.shape, pad, stride)
     val List(hh, ww) = w.shape.takeRight(2)

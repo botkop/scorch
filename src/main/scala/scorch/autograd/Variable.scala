@@ -3,8 +3,6 @@ package scorch.autograd
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
-import scorch.nn.Infer.Id
-import scorch.nn.Module
 import scorch.nn.cnn.MaxPooling
 
 import scala.language.implicitConversions
@@ -14,9 +12,10 @@ object Variable {
   def apply(d: Double, name: Option[String]): Variable =
     Variable(Tensor(d), name = name)
 
+  import scorch.nn.Infer.Id
+  import scorch.nn.Module
   implicit def moduleApply[T <: Module[Id]](m: T): (Variable) => Variable =
     m.forward
-
 }
 
 case class Variable(data: Tensor,
@@ -80,7 +79,6 @@ case class Variable(data: Tensor,
       .NaiveMaxPoolingFunction(this, poolHeight, poolWidth, stride)
       .forward()
 
-  // chain operator, for chaining operations
+  // chain operator
   def ~>(f: (Variable) => Variable): Variable = f(this)
-
 }

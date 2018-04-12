@@ -15,7 +15,15 @@ object Infer extends LowPriority {
 
 abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
 
-  def subModules: Seq[BaseModule] = Seq.empty
+  // by default, obtain submodules through introspection
+  def subModules: Seq[BaseModule] = this.getClass.getDeclaredFields.flatMap {
+    f =>
+      f setAccessible true
+      f.get(this) match {
+        case module: BaseModule => Some(module)
+        case _                  => None
+      }
+  }
 
   def parameters: Seq[Variable] =
     localParameters ++ subModules.flatMap(_.parameters)
@@ -51,4 +59,3 @@ abstract class Module[F[_]: Infer](localParameters: Seq[Variable] = Nil)
   def forward(x: F[Variable]): F[Variable]
   def apply(x: F[Variable]): F[Variable] = forward(x)
 }
-

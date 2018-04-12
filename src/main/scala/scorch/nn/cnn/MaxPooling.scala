@@ -6,7 +6,7 @@ import scorch.autograd.{Function, Variable}
 import scorch.nn.Module
 import scorch.nn.cnn.MaxPooling.NaiveMaxPoolingFunction
 
-// does not have learnable parameters, so probably not a module
+// does not have learnable parameters, so not really a module
 case class MaxPooling(poolHeight: Int, poolWidth: Int, stride: Int)
     extends Module {
 
@@ -38,11 +38,6 @@ object MaxPooling {
                                      stride: Int)
       extends Function {
 
-    /*
-    val List(numDataPoints, numChannels, height, width) = x.shape
-    val hPrime: Int = 1 + (height - poolHeight) / stride
-    val wPrime: Int = 1 + (width - poolWidth) / stride
-     */
     val List(numDataPoints, numChannels, hPrime, wPrime) =
       outputShape(x.shape, poolHeight, poolWidth, stride)
 
@@ -96,6 +91,5 @@ object MaxPooling {
 
       x.backward(Variable(dx))
     }
-
   }
 }

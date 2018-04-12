@@ -6,7 +6,6 @@ import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.TestUtil.oneOpGradientCheck
 import scorch.autograd.Variable
-import scorch.nn.Infer.Id
 import scorch.nn.{Linear, Module}
 import scorch.optim.SGD
 
@@ -135,8 +134,8 @@ class ConvSpec extends FlatSpec with Matchers {
       val pool = nn.cnn.MaxPooling(poolSize, poolStride)
 
       val convOutShape: List[Int] = conv.outputShape(inputShape, pad, stride)
-      val poolOutSize: List[Int] = pool.outputShape(convOutShape)
-      val numFlatFeatures: Int = poolOutSize.tail.product
+      val poolOutShape: List[Int] = pool.outputShape(convOutShape)
+      val numFlatFeatures: Int = poolOutShape.tail.product
 
       val fc1 = Linear(numFlatFeatures, hiddenDim)
       val fc2 = Linear(hiddenDim, numClasses)
@@ -147,7 +146,6 @@ class ConvSpec extends FlatSpec with Matchers {
       override def forward(x: Variable): Variable =
         x ~> conv ~> relu ~> pool ~> flatten ~> fc1 ~> fc2
 
-      override def subModules = Seq(conv, fc1, fc2)
     }
 
     val net = ThreeLayerNetwork()
