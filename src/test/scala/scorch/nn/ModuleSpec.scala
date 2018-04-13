@@ -112,7 +112,8 @@ class ModuleSpec extends FlatSpec with Matchers {
       val fc2 = Linear(nf2, numClasses) // another one
 
       // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
-      override def forward(x: Variable) = fc2(relu(fc1(x)))
+      override def forward(x: Variable): Variable =
+        x ~> fc1 ~> relu ~> fc2
 
     }
 

@@ -127,15 +127,13 @@ case class Net() extends Module {
   val fc2 = Linear(nf2, numClasses) // another one
 
   // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
-  override def forward(x: Variable) = fc2(relu(fc1(x)))
-
-  // register the submodules to allow the world to know what this net is composed of
-  override def subModules = Seq(fc1, fc2)
+  override def forward(x: Variable): Variable = 
+    x ~> fc1 ~> relu ~> fc2
 }
 
 val net = Net()
 ```
-You just have to define the forward function, and list the layers as the output of the subModules method.
+You just have to define the forward function.
 The backward function (where gradients are computed) is automatically defined for you using autograd.
 
 The learnable parameters of a model are returned by `net.parameters`
@@ -302,10 +300,7 @@ case class Net() extends Module {
   val fc2 = Linear(nf2, numClasses) // another one
 
   // glue the layers with a relu non-linearity: fc1 -> relu -> fc2
-  override def forward(x: Variable) = fc2(relu(fc1(x)))
-
-  // register the submodules to allow the world to know what this net is composed of
-  override def subModules = Seq(fc1, fc2)
+  override def forward(x: Variable) = x ~> fc1 ~> relu ~> fc2
 }
 
 // instantiate

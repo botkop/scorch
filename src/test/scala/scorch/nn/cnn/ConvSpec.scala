@@ -101,26 +101,29 @@ class ConvSpec extends FlatSpec with Matchers {
     import scorch._
 
     val weightScale = 1e-3
-    val numSamples = 10
 
+    // input layer
+    val numSamples = 10
     val numChannels = 3
     val imageHeight = 32
     val imageWidth = 32
+    val inputShape = List(numSamples, numChannels, imageHeight, imageWidth)
+
+    // convolution layer
     val numFilters = 32
     val filterSize = 7
     val stride = 1
     val pad = 1
 
+    // pooling layer
     val poolSize = 2
     val poolStride = 2
 
+    // hidden layer
     val hiddenDim = 100
 
+    // output layer
     val numClasses = 10
-
-    val inputShape = List(numSamples, numChannels, imageHeight, imageWidth)
-
-    Nd4j.setDataType(DataBuffer.Type.FLOAT)
 
     case class ThreeLayerNetwork() extends Module {
 
@@ -137,15 +140,14 @@ class ConvSpec extends FlatSpec with Matchers {
       val poolOutShape: List[Int] = pool.outputShape(convOutShape)
       val numFlatFeatures: Int = poolOutShape.tail.product
 
-      val fc1 = Linear(numFlatFeatures, hiddenDim)
-      val fc2 = Linear(hiddenDim, numClasses)
-
       def flatten(v: Variable): Variable =
         v.reshape(numSamples, numFlatFeatures)
 
+      val fc1 = Linear(numFlatFeatures, hiddenDim)
+      val fc2 = Linear(hiddenDim, numClasses)
+
       override def forward(x: Variable): Variable =
         x ~> conv ~> relu ~> pool ~> flatten ~> fc1 ~> fc2
-
     }
 
     val net = ThreeLayerNetwork()
