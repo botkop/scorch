@@ -138,7 +138,7 @@ class ConvSpec extends FlatSpec with Matchers {
 
       val convOutShape: List[Int] = conv.outputShape(inputShape, pad, stride)
       val poolOutShape: List[Int] = pool.outputShape(convOutShape)
-      val numFlatFeatures: Int = poolOutShape.tail.product
+      val numFlatFeatures: Int = poolOutShape.tail.product // all dimensions except the batch dimension
 
       def flatten(v: Variable): Variable =
         v.reshape(numSamples, numFlatFeatures)
