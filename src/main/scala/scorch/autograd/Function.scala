@@ -319,19 +319,16 @@ case class SoftmaxLoss(actual: Variable, target: Variable) extends Function {
   val shiftedLogits: Tensor = x - ns.max(x, axis = 1)
   val z: Tensor = ns.sum(ns.exp(shiftedLogits), axis = 1)
   val logProbs: Tensor = shiftedLogits - ns.log(z)
-  val probs: Tensor = ns.exp(logProbs)
   val n: Int = x.shape.head
-
   val loss: Double = -ns.sum(logProbs(ns.arange(n), y)) / n
-
-  val dx: Tensor = probs
-  dx(ns.arange(n), y) -= 1
-  dx /= n
 
   override def forward(): Variable = Variable(Tensor(loss), Some(this))
 
   override def backward(gradOutput: Variable /* not used */ ): Unit = {
-    logger.debug(s"softmax backward, dx.shape=${dx.shape.toList}")
+    val dx = ns.exp(logProbs)
+    dx(ns.arange(n), y) -= 1
+    dx /= n
+
     actual.backward(Variable(dx))
   }
 }
