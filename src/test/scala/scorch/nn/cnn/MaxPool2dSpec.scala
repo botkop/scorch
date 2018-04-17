@@ -7,7 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd.Variable
 import scorch.TestUtil.oneOpGradientCheck
 
-class MaxPoolingSpec extends FlatSpec with Matchers {
+class MaxPool2dSpec extends FlatSpec with Matchers {
 
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
   ns.rand.setSeed(234)
@@ -19,8 +19,8 @@ class MaxPoolingSpec extends FlatSpec with Matchers {
     val poolHeight = 2
     val stride = 2
 
-    val out = MaxPooling
-      .NaiveMaxPoolingFunction(x, poolHeight, poolWidth, stride)
+    val out = MaxPool2d
+      .NaiveMaxPool2dFunction(x, poolHeight, poolWidth, stride)
       .forward()
 
     val correctOut = ns
@@ -42,8 +42,8 @@ class MaxPoolingSpec extends FlatSpec with Matchers {
     val stride = 2
 
     def fx(a: Variable): Variable =
-      MaxPooling
-        .NaiveMaxPoolingFunction(a, poolHeight, poolWidth, stride)
+      MaxPool2d
+        .NaiveMaxPool2dFunction(a, poolHeight, poolWidth, stride)
         .forward()
 
     oneOpGradientCheck(fx, x)

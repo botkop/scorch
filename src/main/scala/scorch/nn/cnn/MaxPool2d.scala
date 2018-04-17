@@ -4,23 +4,23 @@ import botkop.numsca._
 import botkop.{numsca => ns}
 import scorch.autograd.{Function, Variable}
 import scorch.nn.Module
-import scorch.nn.cnn.MaxPooling.NaiveMaxPoolingFunction
+import scorch.nn.cnn.MaxPool2d.NaiveMaxPool2dFunction
 
 // does not have learnable parameters, so not really a module
-case class MaxPooling(poolHeight: Int, poolWidth: Int, stride: Int)
+case class MaxPool2d(poolHeight: Int, poolWidth: Int, stride: Int)
     extends Module {
 
   def outputShape(inputShape: List[Int]): List[Int] =
-    MaxPooling.outputShape(inputShape, poolHeight, poolWidth, stride)
+    MaxPool2d.outputShape(inputShape, poolHeight, poolWidth, stride)
 
   override def forward(x: Variable): Variable =
-    NaiveMaxPoolingFunction(x, poolHeight, poolWidth, stride).forward()
+    NaiveMaxPool2dFunction(x, poolHeight, poolWidth, stride).forward()
 }
 
-object MaxPooling {
+object MaxPool2d {
 
-  def apply(poolSize: Int, stride: Int): MaxPooling =
-    MaxPooling(poolSize, poolSize, stride)
+  def apply(poolSize: Int, stride: Int): MaxPool2d =
+    MaxPool2d(poolSize, poolSize, stride)
 
   def outputShape(inputShape: List[Int],
                   poolHeight: Int,
@@ -32,10 +32,10 @@ object MaxPooling {
     List(numDataPoints, numChannels, hPrime, wPrime)
   }
 
-  case class NaiveMaxPoolingFunction(x: Variable,
-                                     poolHeight: Int,
-                                     poolWidth: Int,
-                                     stride: Int)
+  case class NaiveMaxPool2dFunction(x: Variable,
+                                    poolHeight: Int,
+                                    poolWidth: Int,
+                                    stride: Int)
       extends Function {
 
     val List(numDataPoints, numChannels, hPrime, wPrime) =

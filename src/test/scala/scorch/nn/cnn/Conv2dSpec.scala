@@ -11,7 +11,7 @@ import scorch.optim.SGD
 
 import scala.language.implicitConversions
 
-class ConvSpec extends FlatSpec with Matchers {
+class Conv2dSpec extends FlatSpec with Matchers {
 
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
   ns.rand.setSeed(231)
@@ -28,7 +28,7 @@ class ConvSpec extends FlatSpec with Matchers {
     val stride = 2
     val pad = 1
 
-    val out = Conv.NaiveConvFunction(x, w, b, stride, pad).forward()
+    val out = Conv2d.NaiveConv2dFunction(x, w, b, stride, pad).forward()
 
     val correctOut = ns
       .array(-0.08759809, -0.10987781, -0.18387192, -0.2109216, 0.21027089,
@@ -49,9 +49,9 @@ class ConvSpec extends FlatSpec with Matchers {
     val stride = 1
     val pad = 1
 
-    def fx(a: Variable) = Conv.NaiveConvFunction(a, w, b, stride, pad).forward()
-    def fw(a: Variable) = Conv.NaiveConvFunction(x, a, b, stride, pad).forward()
-    def fb(a: Variable) = Conv.NaiveConvFunction(x, w, a, stride, pad).forward()
+    def fx(a: Variable) = Conv2d.NaiveConv2dFunction(a, w, b, stride, pad).forward()
+    def fw(a: Variable) = Conv2d.NaiveConv2dFunction(x, a, b, stride, pad).forward()
+    def fb(a: Variable) = Conv2d.NaiveConv2dFunction(x, w, a, stride, pad).forward()
 
     oneOpGradientCheck(fx, x)
     oneOpGradientCheck(fw, w.copy())
@@ -76,7 +76,7 @@ class ConvSpec extends FlatSpec with Matchers {
     val poolStride = 2
 
     case class ConvReluPool() extends Module {
-      val conv = nn.cnn.Conv(numChannels,
+      val conv = nn.cnn.Conv2d(numChannels,
                              numFilters,
                              filterSize,
                              weightScale,
@@ -127,14 +127,14 @@ class ConvSpec extends FlatSpec with Matchers {
 
     case class ThreeLayerNetwork() extends Module {
 
-      val conv = nn.cnn.Conv(numChannels,
+      val conv = nn.cnn.Conv2d(numChannels,
                              numFilters,
                              filterSize,
                              weightScale,
                              stride,
                              pad)
 
-      val pool = nn.cnn.MaxPooling(poolSize, poolStride)
+      val pool = nn.cnn.MaxPool2d(poolSize, poolStride)
 
       val convOutShape: List[Int] = conv.outputShape(inputShape, pad, stride)
       val poolOutShape: List[Int] = pool.outputShape(convOutShape)

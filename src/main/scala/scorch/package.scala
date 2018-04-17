@@ -25,9 +25,9 @@ package object scorch {
               poolHeight: Int,
               poolWidth: Int,
               stride: Int): Variable =
-    v.maxPool(poolHeight, poolWidth, stride)
+    v.maxPool2d(poolHeight, poolWidth, stride)
   def maxPool(v: Variable, poolSize: Int, stride: Int): Variable =
-    v.maxPool(poolSize, poolSize, stride)
+    v.maxPool2d(poolSize, poolSize, stride)
 
   // multi parameter functions
   def cat(v: Variable, w: Variable, axis: Int = 0): Variable =
