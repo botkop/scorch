@@ -7,6 +7,8 @@ and follows an [imperative coding style](https://mxnet.incubator.apache.org/arch
 
 Scorch uses [numsca](https://github.com/botkop/numsca) for creation and processing of Tensors.
 
+Here's an example of a convolutional neural net, with relu and pooling followed by 2 affine layers:
+
 ```scala
 package scorch.sandbox
 
@@ -90,7 +92,7 @@ object ReadmeConvNet extends App {
 
 The documentation below is a copy of the Autograd and Neural Networks sections of 
 [PyTorch blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html),
-but uses Scorch instead of PyTorch.
+adapted for Scorch.
 
 ## Automatic differentiation
 
