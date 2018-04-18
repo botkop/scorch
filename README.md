@@ -17,7 +17,7 @@ import scorch.nn.cnn._
 import scorch.nn._
 import scorch.optim.SGD
 
-class ReadmeConvNet extends App {
+object ReadmeConvNet extends App {
 
   // input layer shape
   val (numSamples, numChannels, imageSize) = (8, 3, 32)
