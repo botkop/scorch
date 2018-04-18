@@ -1,17 +1,98 @@
 Scorch
 ======
-Scorch is a lightweight neural net framework in Scala inspired by PyTorch.
+Scorch is a deep learning framework in Scala inspired by PyTorch.
 
 It has [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) built in 
 and follows an [imperative coding style](https://mxnet.incubator.apache.org/architecture/program_model.html#symbolic-vs-imperative-programs).
 
 Scorch uses [numsca](https://github.com/botkop/numsca) for creation and processing of Tensors.
 
-The documentation below is almost an exact copy of the Autograd and Neural Networks sections of 
-the [PyTorch blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html),
-but instead of PyTorch it uses Scorch.
+```scala
+package scorch.sandbox
 
-# Automatic differentiation
+import botkop.{numsca => ns}
+import scorch._
+import scorch.autograd.Variable
+import scorch.nn.cnn._
+import scorch.nn._
+import scorch.optim.SGD
+
+class ReadmeConvNet extends App {
+
+  // input layer shape
+  val (numSamples, numChannels, imageSize) = (8, 3, 32)
+  val inputShape = List(numSamples, numChannels, imageSize, imageSize)
+
+  // output layer
+  val numClasses = 10
+
+  // network blueprint for conv -> relu -> pool -> affine -> affine
+  case class ConvReluPoolAffineNetwork() extends Module {
+
+    // convolutional layer
+    val conv = Conv2d(numChannels = 3, numFilters = 32, filterSize = 7, weightScale = 1e-3, stride = 1, pad = 1)
+    // pooling layer
+    val pool = MaxPool2d(poolSize = 2, stride = 2)
+
+    // calculate number of flat features
+    val poolOutShape = pool.outputShape(conv.outputShape(inputShape))
+    val numFlatFeatures = poolOutShape.tail.product // all dimensions except the batch dimension
+
+    // reshape from 3d pooling output to 2d affine input
+    def flatten(v: Variable): Variable = v.reshape(numSamples, numFlatFeatures)
+
+    // first affine layer
+    val fc1 = Linear(numFlatFeatures, 100)
+    // second affine layer (output)
+    val fc2 = Linear(100, numClasses)
+
+    // chain the layers in a forward pass definition
+    override def forward(x: Variable): Variable =
+      x ~> conv ~> relu ~> pool ~> flatten ~> fc1 ~> fc2
+  }
+
+  // instantiate the network
+  val net = ConvReluPoolAffineNetwork()
+
+  // stochastic gradient descent optimizer for updating the parameters
+  val optimizer = SGD(net.parameters, lr = 0.001)
+
+  // random input and target
+  val input = Variable(ns.randn(inputShape: _*))
+  val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
+
+  // loop (should reach 100% accuracy in 2 steps)
+  for (j <- 0 to 3) {
+
+    // reset gradients
+    optimizer.zeroGrad()
+
+    // forward pass
+    val output = net(input)
+
+    // calculate the loss
+    val loss = softmaxLoss(output, target)
+
+    // log accuracy
+    val guessed = ns.argmax(output.data, axis = 1)
+    val accuracy = ns.sum(target.data == guessed) / numSamples
+    println(s"$j: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+
+    // backward pass
+    loss.backward()
+
+    // update parameters with gradients
+    optimizer.step()
+  }
+}
+```
+
+
+The documentation below is a copy of the Autograd and Neural Networks sections of 
+[PyTorch blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html),
+but uses Scorch instead of PyTorch.
+
+## Automatic differentiation
 
 Central to all neural networks in Scorch is the autograd package. 
 Let’s first briefly visit this, and we will then go to training our first neural network.
@@ -19,14 +100,14 @@ Let’s first briefly visit this, and we will then go to training our first neur
 The `autograd` package provides automatic differentiation for all operations on Tensors. 
 It is a define-by-run framework, which means that your backprop is defined by how your code is run, and that every single iteration can be different.
 
-## Variable
+### Variable
 `autograd.Variable` is the central class of the package. 
 It wraps a [numsca](https://github.com/botkop/numsca) `Tensor`, and supports nearly all the operations defined on it. 
 Once you finish your computation you can call `.backward()` and have all the gradients computed automatically.
 
 You can access the raw tensor through the `.data` attribute, while the gradient w.r.t. this variable is accumulated into `.grad`.
 
-## Function
+### Function
 There’s one more class which is very important for autograd implementation - a `Function`.
 
 `Variable` and `Function` are interconnected and build up an acyclic graph, 
@@ -81,7 +162,7 @@ data: [[27.00,  27.00],
  [27.00,  27.00]]
 out: scorch.autograd.Variable = data: 27.00
 ```
-## Gradients
+### Gradients
 Let’s backprop now, and print gradients d(out)/dx.
 ```scala
 out.backward()
@@ -92,7 +173,7 @@ data: [[4.50,  4.50],
  [4.50,  4.50]]
 ```
 
-# Neural Networks
+## Neural Networks
 Neural networks can be constructed using the `scorch.nn` package.
 
 Now that you had a glimpse of `autograd`, `nn` depends on autograd to define models and differentiate them. 
@@ -109,7 +190,7 @@ A typical training procedure for a neural network is as follows:
 
   `weight = weight - learningRate * gradient`
   
-## Define the network
+### Define the network
 Let’s define this network:
 ```scala
 import scorch.autograd.Variable
@@ -193,7 +274,7 @@ __Still Left:__
 * Computing the loss
 * Updating the weights of the network
 
-## Loss function
+### Loss function
 A loss function takes the (output, target) pair of inputs, 
 and computes a value that estimates how far away the output is from the target.
 
@@ -222,7 +303,7 @@ So, when we call `loss.backward()`,
 the whole graph is differentiated w.r.t. the loss, 
 and all Variables in the graph will have their `.grad` Variable accumulated with the gradient.
 
-## Backprop
+### Backprop
 
 To backpropagate the error all we have to do is to call `loss.backward()`. 
 You need to clear the existing gradients though, else gradients will be accumulated to existing gradients.
@@ -250,7 +331,7 @@ __The only thing left to learn is:__
 
 * Updating the weights of the network
 
-## Update the weights
+### Update the weights
 
 The simplest update rule used in practice is the Stochastic Gradient Descent (SGD):
 
@@ -280,7 +361,7 @@ loss.backward()                        // back propagate the derivatives
 optimizer.step()                       // update the parameters with the gradients
 ```
 
-# Wrap up
+## Wrap up
 To wrap up, here is a complete example:
 
 ```scala
@@ -339,16 +420,16 @@ for (j <- 0 to 1000) {
 }
 ```
 
-# Contributors
+## Contributors
 Thanks to [Jasper](https://github.com/Jasper-M) for helping out with Scala type inference magic far beyond my capabilities.
 
-# Dependency
+## Dependency
 Add this to build.sbt:
 ```scala
 libraryDependencies += "be.botkop" %% "scorch" % "0.1.0-SNAPSHOT"
 ```
 
-# References
+## References
 - [Deep Learning with PyTorch: A 60 Minute Blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html)
 - [Backpropagation, Intuitions](http://cs231n.github.io/optimization-2/)
 - [Automatic Differentiation in Machine Learning: a Survey](https://arxiv.org/pdf/1502.05767.pdf)

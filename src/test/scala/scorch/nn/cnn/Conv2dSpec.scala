@@ -49,9 +49,12 @@ class Conv2dSpec extends FlatSpec with Matchers {
     val stride = 1
     val pad = 1
 
-    def fx(a: Variable) = Conv2d.NaiveConv2dFunction(a, w, b, stride, pad).forward()
-    def fw(a: Variable) = Conv2d.NaiveConv2dFunction(x, a, b, stride, pad).forward()
-    def fb(a: Variable) = Conv2d.NaiveConv2dFunction(x, w, a, stride, pad).forward()
+    def fx(a: Variable) =
+      Conv2d.NaiveConv2dFunction(a, w, b, stride, pad).forward()
+    def fw(a: Variable) =
+      Conv2d.NaiveConv2dFunction(x, a, b, stride, pad).forward()
+    def fb(a: Variable) =
+      Conv2d.NaiveConv2dFunction(x, w, a, stride, pad).forward()
 
     oneOpGradientCheck(fx, x)
     oneOpGradientCheck(fw, w.copy())
@@ -77,11 +80,11 @@ class Conv2dSpec extends FlatSpec with Matchers {
 
     case class ConvReluPool() extends Module {
       val conv = nn.cnn.Conv2d(numChannels,
-                             numFilters,
-                             filterSize,
-                             weightScale,
-                             stride,
-                             pad)
+                               numFilters,
+                               filterSize,
+                               weightScale,
+                               stride,
+                               pad)
       override def subModules = Seq(conv)
       def pool(v: Variable): Variable = maxPool(v, poolSize, poolStride)
 
@@ -128,17 +131,18 @@ class Conv2dSpec extends FlatSpec with Matchers {
     case class ThreeLayerNetwork() extends Module {
 
       val conv = nn.cnn.Conv2d(numChannels,
-                             numFilters,
-                             filterSize,
-                             weightScale,
-                             stride,
-                             pad)
+                               numFilters,
+                               filterSize,
+                               weightScale,
+                               stride,
+                               pad)
 
       val pool = nn.cnn.MaxPool2d(poolSize, poolStride)
 
       val convOutShape: List[Int] = conv.outputShape(inputShape, pad, stride)
       val poolOutShape: List[Int] = pool.outputShape(convOutShape)
-      val numFlatFeatures: Int = poolOutShape.tail.product // all dimensions except the batch dimension
+      val numFlatFeatures
+        : Int = poolOutShape.tail.product // all dimensions except the batch dimension
 
       def flatten(v: Variable): Variable =
         v.reshape(numSamples, numFlatFeatures)
@@ -169,4 +173,5 @@ class Conv2dSpec extends FlatSpec with Matchers {
       optimizer.step()
     }
   }
+
 }

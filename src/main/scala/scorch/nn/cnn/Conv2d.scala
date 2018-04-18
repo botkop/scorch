@@ -6,16 +6,16 @@ import org.nd4j.linalg.factory.Nd4j.PadMode
 import scorch.nn.Module
 import scorch.autograd.{Function, Variable}
 
-case class Conv2d(w: Variable, b: Variable, stride: Int, pad: Int)
+case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
     extends Module(Seq(w, b)) {
 
   import Conv2d._
 
-  def outputShape(inputShape: List[Int], pad: Int, stride: Int): List[Int] =
+  def outputShape(inputShape: List[Int]): List[Int] =
     Conv2d.outputShape(inputShape, w.shape, pad, stride)
 
   override def forward(x: Variable): Variable =
-    NaiveConv2dFunction(x, w, b, stride, pad).forward()
+    NaiveConv2dFunction(x, w, b, pad, stride).forward()
 }
 
 object Conv2d {
@@ -24,12 +24,12 @@ object Conv2d {
             numFilters: Int,
             filterSize: Int,
             weightScale: Double,
-            stride: Int,
-            pad: Int): Conv2d = {
+            pad: Int,
+            stride: Int): Conv2d = {
     val w = Variable(
       weightScale * ns.randn(numFilters, numChannels, filterSize, filterSize))
     val b = Variable(ns.zeros(numFilters))
-    Conv2d(w, b, stride, pad)
+    Conv2d(w, b, pad, stride)
   }
 
   def outputShape(xShape: List[Int],
@@ -46,8 +46,8 @@ object Conv2d {
   case class NaiveConv2dFunction(x: Variable,
                                  w: Variable,
                                  b: Variable,
-                                 stride: Int,
-                                 pad: Int)
+                                 pad: Int,
+                                 stride: Int)
       extends Function {
 
     val List(numDataPoints, numFilters, hPrime, wPrime) =
