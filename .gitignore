@@ -8,5 +8,5 @@ target
 /RUNNING_PID
 project/project
 project/target
-data
+/data
 *~
