@@ -2,7 +2,7 @@ package scorch.data.loader
 
 import botkop.numsca.Tensor
 
-trait DataLoader extends Iterable[(Tensor, Tensor)] {
+trait DataLoader extends scala.collection.immutable.Iterable[(Tensor, Tensor)] {
   def numSamples: Int
   def numBatches: Int
 }
