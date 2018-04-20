@@ -116,7 +116,6 @@ class WordEmbeddingSpec extends FlatSpec with Matchers {
         out2
       }
 
-      override def subModules: Seq[Module[Id]] = Seq(embeddings, linear1, linear2)
     }
 
     val model = NGramLanguageModeler(vocab.length, embeddingDim, contextSize)

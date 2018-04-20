@@ -24,10 +24,10 @@ class Conv2dSpec extends FlatSpec with Matchers {
     val w =
       Variable(ns.linspace(-0.2, 0.3, num = wShape.product).reshape(wShape: _*))
     val b = Variable(ns.linspace(-0.1, 0.2, num = 3))
-    val stride = 2
     val pad = 1
+    val stride = 2
 
-    val out = Conv2d.NaiveConv2dFunction(x, w, b, stride, pad).forward()
+    val out = Conv2d.NaiveConv2dFunction(x, w, b, pad, stride).forward()
 
     val correctOut = ns
       .array(-0.08759809, -0.10987781, -0.18387192, -0.2109216, 0.21027089,
@@ -49,11 +49,11 @@ class Conv2dSpec extends FlatSpec with Matchers {
     val pad = 1
 
     def fx(a: Variable) =
-      Conv2d.NaiveConv2dFunction(a, w, b, stride, pad).forward()
+      Conv2d.NaiveConv2dFunction(a, w, b, pad, stride).forward()
     def fw(a: Variable) =
-      Conv2d.NaiveConv2dFunction(x, a, b, stride, pad).forward()
+      Conv2d.NaiveConv2dFunction(x, a, b, pad, stride).forward()
     def fb(a: Variable) =
-      Conv2d.NaiveConv2dFunction(x, w, a, stride, pad).forward()
+      Conv2d.NaiveConv2dFunction(x, w, a, pad, stride).forward()
 
     oneOpGradientCheck(fx, x)
     oneOpGradientCheck(fw, w.copy())

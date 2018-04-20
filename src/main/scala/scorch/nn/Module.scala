@@ -16,7 +16,7 @@ object Infer extends LowPriority {
 abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
 
   // by default, obtain submodules through introspection
-  def subModules: Seq[BaseModule] = this.getClass.getDeclaredFields.flatMap {
+  lazy val subModules: Seq[BaseModule] = this.getClass.getDeclaredFields.flatMap {
     f =>
       f setAccessible true
       f.get(this) match {
