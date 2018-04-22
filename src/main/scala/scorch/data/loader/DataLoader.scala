@@ -1,8 +1,8 @@
 package scorch.data.loader
 
-import botkop.numsca.Tensor
+import scorch.autograd.Variable
 
-trait DataLoader extends scala.collection.immutable.Iterable[(Tensor, Tensor)] {
+trait DataLoader extends scala.collection.immutable.Iterable[(Variable, Variable)] {
   def numSamples: Int
   def numBatches: Int
 }
@@ -14,7 +14,7 @@ object DataLoader {
                take: Option[Int] = None): DataLoader =
     dataSet match {
       case "cifar-10" =>
-        new Cifar10DataLoader(mode, miniBatchSize, take)
+        new Cifar10DataLoader(mode, miniBatchSize, take = take)
       case "mnist" =>
         new MnistDataLoader(mode, miniBatchSize, take)
     }

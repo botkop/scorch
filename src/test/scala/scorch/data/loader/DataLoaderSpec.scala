@@ -24,9 +24,9 @@ class DataLoaderSpec extends FlatSpec with Matchers {
     assert(loader.size == take)
 
     loader.foreach {
-      case (x: Tensor, y: Tensor) =>
+      case (x, y) =>
         assert(x.shape.head == miniBatchSize)
-        assert(x.shape(1) == 3 * 32 * 32)
+        // assert(x.shape(1) == 3 * 32 * 32)
         assert(y.shape.head == miniBatchSize)
         assert(y.shape(1) == 1)
     }
@@ -64,11 +64,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
                                        mode = "train",
                                        take = Some(numBatches * batchSize))
 
-    val seq = loader.map {
-      case (x, y) =>
-        // (Variable(x.reshape(batchSize, 32, 32, 3).transpose(0, 3, 1, 2)),
-        (Variable(x.reshape(batchSize, 3, 32, 32)), Variable(y))
-    }.toSeq
+    val seq = loader.toSeq
 
     for (epoch <- 0 to 10) {
       seq.zipWithIndex

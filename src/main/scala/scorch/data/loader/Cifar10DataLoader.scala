@@ -2,11 +2,12 @@ package scorch.data.loader
 
 import java.awt.image.BufferedImage
 import java.io._
-import javax.imageio.ImageIO
 
+import javax.imageio.ImageIO
 import botkop.numsca
 import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
+import scorch.autograd.Variable
 
 import scala.collection.parallel.mutable.ParArray
 import scala.language.postfixOps
@@ -14,6 +15,7 @@ import scala.util.Random
 
 class Cifar10DataLoader(mode: String,
                         miniBatchSize: Int,
+                        tailShape: Seq[Int] = Seq(3, 32, 32),
                         take: Option[Int] = None,
                         seed: Long = 231)
     extends DataLoader
@@ -37,7 +39,7 @@ class Cifar10DataLoader(mode: String,
     (numSamples / miniBatchSize) +
       (if (numSamples % miniBatchSize == 0) 0 else 1)
 
-  override def iterator: Iterator[(Tensor, Tensor)] = {
+  override def iterator: Iterator[(Variable, Variable)] = {
     val batches: Iterator[List[File]] = new Random(seed)
       .shuffle(files)
       .take(numSamples)
@@ -52,8 +54,8 @@ class Cifar10DataLoader(mode: String,
       val xData = yxs flatMap (_.x) toArray
       val yData = yxs map (_.y) toArray
 
-      val x = Tensor(xData).reshape(batchSize, numFeatures)
-      val y = Tensor(yData).reshape(batchSize, 1)
+      val x = Variable(Tensor(xData).reshape(batchSize +: tailShape:_*))
+      val y = Variable(Tensor(yData).reshape(batchSize, 1))
 
       (x, y)
     }

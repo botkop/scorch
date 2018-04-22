@@ -5,6 +5,7 @@ import java.util.zip.GZIPInputStream
 
 import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
+import scorch.autograd.Variable
 
 import scala.io.Source
 import scala.util.Random
@@ -33,7 +34,7 @@ class MnistDataLoader(mode: String,
     (numSamples / miniBatchSize) +
       (if (numSamples % miniBatchSize == 0) 0 else 1)
 
-  override def iterator: Iterator[(Tensor, Tensor)] =
+  override def iterator: Iterator[(Variable, Variable)] =
     new Random(seed)
       .shuffle(
         Source
@@ -52,8 +53,8 @@ class MnistDataLoader(mode: String,
               (x ::: xs, y :: ys)
           }
 
-        val x = Tensor(xData.toArray).reshape(yData.length, 784).transpose
-        val y = Tensor(yData.toArray).reshape(yData.length, 1).transpose
+        val x = Variable(Tensor(xData.toArray).reshape(yData.length, 784))
+        val y = Variable(Tensor(yData.toArray).reshape(yData.length, 1))
 
         (x, y)
       }

@@ -7,17 +7,21 @@ import akka.util.Timeout
 import akka.pattern.ask
 
 import scala.concurrent.duration._
+import botkop.{numsca => ns}
 import botkop.numsca.Tensor
 import scorch._
 import scorch.autograd.Variable
 import scorch.data.loader.NetActor.{Ack, Backward, Complete, Init}
+import scorch.data.loader.ParallelLoader.batchSize
 import scorch.nn.Infer.Id
 import scorch.nn.{Linear, Module}
 import scorch.nn.cnn.{Conv2d, MaxPool2d}
 import scorch.optim.{Adam, Optimizer}
 
-import scala.concurrent.Future
+import scala.collection.immutable
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 class NetActor(net: Module[Id], lossFunction: (Variable, Variable) => Variable)
     extends Actor {
@@ -46,6 +50,7 @@ class NetActor(net: Module[Id], lossFunction: (Variable, Variable) => Variable)
   }
 }
 
+/*
 class OptimActor(optimizer: Optimizer) extends Actor {
   override def receive: Receive = {
     case gradients: Seq[Variable] =>
@@ -56,6 +61,7 @@ class OptimActor(optimizer: Optimizer) extends Actor {
       sender ! optimizer.parameters
   }
 }
+ */
 
 object NetActor {
   def props(net: Module[Id]) = Props(new NetActor(net, softmaxLoss))
@@ -83,6 +89,8 @@ case class Net(batchSize: Int) extends Module {
   def flatten(v: Variable): Variable = v.reshape(batchSize, numFlatFeatures)
   val fc = Linear(numFlatFeatures, numClasses)
 
+  def gradients: Seq[Tensor] = parameters.map(_.grad.data)
+
   override def forward(x: Variable): Variable =
     x ~> conv ~> relu ~> pool ~> flatten ~> fc ~> relu
 
@@ -104,19 +112,158 @@ object ParallelLoader extends App {
   val netActor = system.actorOf(NetActor.props(net))
 
   val source = Source(loader)
-    .mapAsync(4) {
-      case (x, y) =>
-        Future(Variable(x.reshape(batchSize, 3, 32, 32)), Variable(y))
-    }
-  /*
-    .runForeach {
-      case (x, y) =>
-        (netActor ? (x, y)).mapTo[Double].foreach(println)
-    }
-   */
 
   val sink = Sink.actorRefWithAck(netActor, Init, Ack, Complete)
 
   source.runWith(sink)
+}
+
+object FlatLoader extends App {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val parallelism = 4
+
+  val batchSize = 16
+
+  val loader = new Cifar10DataLoader(miniBatchSize = batchSize,
+                                     mode = "train",
+                                     take = None)
+
+  val base = Net(batchSize)
+  val workers = Seq.fill(parallelism)(Net(batchSize))
+  val optimizer = Adam(base.parameters, lr = 0.001)
+
+  def add(as: Seq[Tensor], bs: Seq[Tensor]): Seq[Tensor] =
+    as.zip(bs).map { case (a, b) => a + b }
+
+  def pass(iteration: Int, worker: Net, x: Variable, y: Variable): Unit = {
+    println("pass")
+    val yHat = worker(x)
+    val loss = softmaxLoss(yHat, y)
+    println(s"iteration: $iteration loss = ${loss.data.squeeze()}")
+    loss.backward()
+  }
+
+  def updateBaseGradients(allGradients: Seq[Seq[Tensor]]): Unit = {
+    val sums = allGradients.fold(base.gradients) {
+      case (a, b) => add(a, b)
+    }
+    val means = sums.map(_ / parallelism)
+    base.gradients.zip(means).foreach {
+      case (bg, m) =>
+        bg := m
+    }
+  }
+
+  loader.zipWithIndex
+    .sliding(parallelism, parallelism)
+    .map(_.toList)
+    .foreach { pb: List[((Variable, Variable), Int)] =>
+      base.zeroGrad()
+
+      val fs: Seq[Future[Seq[Tensor]]] = workers
+        .zip(pb)
+        .map {
+          case (worker, ((x, y), ix)) =>
+            Future {
+              worker.zeroGrad()
+              pass(ix, worker, x, y)
+              worker.gradients
+            }
+        }
+
+      val results = Future.sequence(fs)
+
+      results.onComplete {
+        case Success(allGradients) =>
+          /*
+          val sums = allGradients.fold(base.gradients) {
+            case (a, b) => add(a, b)
+          }
+          val means = sums.map(_ / parallelism)
+          base.gradients.zip(means).foreach {
+            case (bg, m) =>
+              bg := m
+          }
+           */
+          updateBaseGradients(allGradients)
+
+          optimizer.step()
+
+          workers.foreach { w =>
+            base.parameters.zip(w.parameters).foreach {
+              case (bp, wp) =>
+                wp.data := bp.data
+            }
+          }
+          println("step")
+
+        case Failure(ex) =>
+          throw new Exception(ex)
+      }
+
+      Await.ready(results, 20 seconds)
+    }
+}
+
+case class ParallelModule(modules: Seq[Module[Id]]) {}
+
+object ParallelModule {
+
+  case class ParallelModuleFunction(x: Variable,
+                                    baseModule: Module[Id],
+                                    workerModules: Seq[Module[Id]],
+                                    timeOut: Duration = Duration.Inf)
+      extends scorch.autograd.Function {
+    import ns._
+
+    val parallelism: Int = workerModules.length
+    val batchSize: Int = x.shape.head
+
+    def scatter(v: Variable): Seq[Variable] =
+      (0 until batchSize)
+        .sliding(parallelism, parallelism)
+        .map(s => (s.head, s.last))
+        .map {
+          case (first, last) =>
+            Variable(v.data(first :> last))
+        }
+        .toSeq
+
+    // set parameters of all workers to parameters of base module
+    // todo: zeroGrad workers or also set gradients?
+    workerModules.foreach { wm =>
+      wm.parameters.zip(baseModule.parameters).foreach {
+        case (wp, bp) =>
+          wp.data := bp.data
+      }
+    }
+
+    val xs: Seq[Variable] = scatter(x)
+    val fs: Seq[Future[Variable]] = xs.zip(workerModules).map {
+      case (v, worker) =>
+        Future(worker(v))
+    }
+    val results: Seq[Variable] = Await.result(Future.sequence(fs), timeOut)
+
+    override def forward(): Variable = {
+      Variable(ns.concatenate(results.map(_.data)), Some(this))
+    }
+
+    override def backward(gradOutput: Variable): Unit = {
+      val gs = scatter(gradOutput)
+      val fs = results.zip(gs).map {
+        case (v, g) =>
+          Future(v.backward(g))
+      }
+      Await.result(Future.sequence(fs), timeOut)
+
+      // collect gradients and back prop
+      val allGradients: Seq[Seq[Variable]] = workerModules.map { wm =>
+        wm.parameters.map(_.grad)
+      }
+
+    }
+  }
 
 }
