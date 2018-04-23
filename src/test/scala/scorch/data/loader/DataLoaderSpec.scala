@@ -2,6 +2,8 @@ package scorch.data.loader
 
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
+import org.nd4j.linalg.api.buffer.DataBuffer
+import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch._
 import scorch.autograd.Variable
@@ -11,8 +13,13 @@ import scorch.optim.Adam
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.Random
 
 class DataLoaderSpec extends FlatSpec with Matchers {
+
+  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  ns.rand.setSeed(231)
+  Random.setSeed(231)
 
   "A cifar-10 loader" should "load data" in {
 
@@ -38,7 +45,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
   it should "feed a network" in {
 
     val batchSize = 16
-    val numBatches = 2
+    val numBatches = 1
 
     val (numChannels, imageSize) = (3, 32)
     val inputShape = List(batchSize, numChannels, imageSize, imageSize)
