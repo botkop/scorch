@@ -38,7 +38,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     assert(yHat.data.sameShape(input.data))
   }
 
-  it should "backard pass" in {
+  it should "update the gradients of the module" in {
     val batchSize = 32
     val numFeatures = 20
     val numClasses = 10
@@ -64,21 +64,17 @@ class ParallelizeSpec extends FlatSpec with Matchers {
 
     loss.backward()
 
-    // net.parameters.foreach(println)
-
-    println
-    println
-
-    // parCopies.foreach(println)
-
     net.parameters.map(_.grad).foreach(println)
 
-    def f(a: Variable): Variable = p.forward(a)
-    oneOpGradientCheck(f, input)
+    net.parameters.foreach { p =>
+      assert(p.grad.data.sameShape(p.data))
+      assert(ns.sum(p.grad.data) != 0.0)
+    }
+
   }
 
-  it should "eval the function" in {
-    val batchSize = 32
+  "The parallelization function" should "calulate the correct gradients" in {
+    val batchSize = 100
     val numFeatures = 20
     val numClasses = 10
     case class Net() extends Module[Id] {
@@ -90,12 +86,12 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     def f(a: Variable) =
       ParallelizeFunction(a,
                           baseModule = net,
-                          parallelism = 2,
+                          parallelism = 8,
                           timeOut = 20 seconds)
         .forward()
 
     val input = Variable(ns.randn(batchSize, numFeatures))
-    oneOpGradientCheck(f, input)
+    oneOpGradientCheck(f, input, 1e-7)
   }
 
 }

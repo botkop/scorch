@@ -87,7 +87,6 @@ class Conv2dSpec extends FlatSpec with Matchers {
       def pool(v: Variable): Variable = maxPool(v, poolSize, poolStride)
       override def forward(x: Variable): Variable =
         x ~> conv ~> relu ~> pool
-        //pool(relu(conv(x)))
     }
 
     val net = ConvReluPool()

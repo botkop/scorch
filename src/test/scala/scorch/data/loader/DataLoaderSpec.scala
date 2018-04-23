@@ -9,6 +9,9 @@ import scorch.nn.cnn.{Conv2d, MaxPool2d}
 import scorch.nn.{Linear, Module}
 import scorch.optim.Adam
 
+import scala.concurrent.duration._
+import scala.language.postfixOps
+
 class DataLoaderSpec extends FlatSpec with Matchers {
 
   "A cifar-10 loader" should "load data" in {
@@ -34,8 +37,8 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
   it should "feed a network" in {
 
-    val batchSize = 10
-    val numBatches = 1
+    val batchSize = 16
+    val numBatches = 2
 
     val (numChannels, imageSize) = (3, 32)
     val inputShape = List(batchSize, numChannels, imageSize, imageSize)
@@ -51,7 +54,8 @@ class DataLoaderSpec extends FlatSpec with Matchers {
       val pool = MaxPool2d(poolSize = 2, stride = 2)
       val numFlatFeatures: Int =
         pool.outputShape(conv.outputShape(inputShape)).tail.product
-      def flatten(v: Variable): Variable = v.reshape(batchSize, numFlatFeatures)
+      // def flatten(v: Variable): Variable = v.reshape(batchSize, numFlatFeatures)
+      def flatten(v: Variable): Variable = v.reshape(-1, numFlatFeatures)
       val fc = Linear(numFlatFeatures, numClasses)
 
       override def forward(x: Variable): Variable =
@@ -59,7 +63,10 @@ class DataLoaderSpec extends FlatSpec with Matchers {
     }
 
     val net = Net()
-    val optimizer = Adam(net.parameters, lr = 0.01)
+
+    val pNet = scorch.nn.Parallelize(net, 4, 20 seconds)
+
+    val optimizer = Adam(net.parameters, lr = 0.001)
     val loader = new Cifar10DataLoader(miniBatchSize = batchSize,
                                        mode = "train",
                                        take = Some(numBatches * batchSize))
@@ -71,7 +78,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
         .foreach {
           case ((x, y), i) =>
             optimizer.zeroGrad()
-            val yHat = net(x)
+            val yHat = pNet(x)
             val loss = softmaxLoss(yHat, y)
 
             val guessed = ns.argmax(yHat.data, axis = 1)
