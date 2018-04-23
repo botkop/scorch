@@ -7,7 +7,6 @@ import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest._
 import scorch.TestUtil._
-import scorch.nn.BatchNorm.BatchNormFunction
 import scorch.nn.Dropout.DropoutFunction
 
 class FunctionGradientSpec
@@ -92,9 +91,9 @@ class FunctionGradientSpec
   }
 
   "Exp" should "calculate gradients" in {
-    val a = Variable(ns.randn(4, 6))
+    val x = Variable(ns.randn(4, 6))
     def f(a: Variable): Variable = Exp(a).forward()
-    oneOpGradientCheck(f, a)
+    oneOpGradientCheck(f, x)
   }
 
   "Tanh" should "calculate gradients" in {

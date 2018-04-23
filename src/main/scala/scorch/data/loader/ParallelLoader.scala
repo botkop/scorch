@@ -199,21 +199,31 @@ object FlatLoader extends App {
         case Failure(ex) =>
           throw new Exception(ex)
       }
-
       Await.ready(results, 20 seconds)
     }
 }
 
-case class ParallelModule(modules: Seq[Module[Id]]) {}
+case class Parallelize(module: Module[Id],
+                       parallelism: Int,
+                       timeOut: Duration = Duration.Inf)
+    extends Module {
 
-object ParallelModule {
+  // val workers: Seq[Module[Id]] = Seq.fill(parallelism)(module.clone().asInstanceOf[Module[Id]])
 
-  case class ParallelModuleFunction(x: Variable,
-                                    baseModule: Module[Id],
-                                    workerModules: Seq[Module[Id]],
-                                    timeOut: Duration = Duration.Inf)
+  import Parallelize._
+  override def forward(x: Variable): Variable = ???
+}
+
+object Parallelize {
+
+  case class ParallelizeFunction(x: Variable,
+                                 baseModule: Module[Id],
+                                 workerModules: Seq[Module[Id]],
+                                 timeOut: Duration = Duration.Inf)
       extends scorch.autograd.Function {
     import ns._
+
+    import scala.concurrent.ExecutionContext.Implicits.global
 
     val parallelism: Int = workerModules.length
     val batchSize: Int = x.shape.head
