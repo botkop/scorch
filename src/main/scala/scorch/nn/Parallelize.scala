@@ -19,7 +19,6 @@ case class Parallelize(module: Module[Id],
 }
 
 object Parallelize {
-
   case class ParallelizeFunction(x: Variable,
                                  baseModule: Module[Id],
                                  parallelism: Int,
@@ -37,35 +36,34 @@ object Parallelize {
       .map(s => (s.head, s.last + 1))
       .toSeq
 
-    val chunkedXs: Seq[Variable] = fromTos.map {
-      case (first, last) => Variable(x.data(first :> last))
+    val fs: Seq[Future[(Variable, Variable)]] = fromTos.map {
+      case (first, last) =>
+        Future {
+          val cx = Variable(x.data(first :> last))
+          (cx, baseModule(cx))
+        }
     }
 
-    val fs: Seq[Future[Variable]] = chunkedXs.map { cx =>
-      Future {
-        baseModule(cx)
-      }
-    }
-
-    val activations: Seq[Variable] = Await.result(Future.sequence(fs), timeOut)
+    val activations: Seq[(Variable, Variable)] =
+      Await.result(Future.sequence(fs), timeOut)
+    val xs: Seq[Variable] = activations.map(_._1)
+    val predictions: Seq[Variable] = activations.map(_._2)
 
     override def forward(): Variable =
-      Variable(ns.concatenate(activations.map(_.data)), Some(this))
+      Variable(ns.concatenate(predictions.map(_.data)), Some(this))
 
     override def backward(gradOutput: Variable): Unit = {
-      val fs = activations.zip(fromTos).map {
+      val fs = predictions.zip(fromTos).map {
         case (v, (first, last)) =>
           Future {
             val g = Variable(gradOutput.data(first :> last))
-            // todo: thread safe ?
             v.backward(g)
           }
       }
       Await.result(Future.sequence(fs), timeOut)
 
-      val gradient = Variable(ns.concatenate(chunkedXs.map(_.grad.data)))
+      val gradient = Variable(ns.concatenate(xs.map(_.grad.data)))
       x.backward(gradient)
     }
   }
 }
-

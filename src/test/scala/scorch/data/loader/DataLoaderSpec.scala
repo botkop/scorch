@@ -44,7 +44,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
   it should "feed a network" in {
 
-    val batchSize = 16
+    val batchSize = 32
     val numBatches = 1
 
     val (numChannels, imageSize) = (3, 32)
@@ -61,7 +61,6 @@ class DataLoaderSpec extends FlatSpec with Matchers {
       val pool = MaxPool2d(poolSize = 2, stride = 2)
       val numFlatFeatures: Int =
         pool.outputShape(conv.outputShape(inputShape)).tail.product
-      // def flatten(v: Variable): Variable = v.reshape(batchSize, numFlatFeatures)
       def flatten(v: Variable): Variable = v.reshape(-1, numFlatFeatures)
       val fc = Linear(numFlatFeatures, numClasses)
 
@@ -70,7 +69,6 @@ class DataLoaderSpec extends FlatSpec with Matchers {
     }
 
     val net = Net()
-
     val pNet = scorch.nn.Parallelize(net, 4, 20 seconds)
 
     val optimizer = Adam(net.parameters, lr = 0.001)
