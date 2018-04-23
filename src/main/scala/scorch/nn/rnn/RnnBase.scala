@@ -12,7 +12,7 @@ import scala.annotation.tailrec
   * and sampling of results.
   * @param cell the cell base underlying this Rnn
   */
-case class RnnBase(cell: RnnCellBase) extends Module[Seq](cell.parameters) {
+case class RnnBase(cell: RnnCellBase) extends SeqModule(cell.parameters) {
 
   /**
     * Performs the forward propagation through the RNN

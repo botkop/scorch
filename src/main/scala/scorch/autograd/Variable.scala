@@ -4,6 +4,7 @@ import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
 import scorch.nn.cnn.MaxPool2d
+import scorch.nn.Module
 
 import scala.language.implicitConversions
 
@@ -12,9 +13,9 @@ object Variable {
   def apply(d: Double, name: Option[String]): Variable =
     Variable(Tensor(d), name = name)
 
-  import scorch.nn.Infer.Id
-  import scorch.nn.Module
-  implicit def moduleApply[T <: Module[Id]](m: T): (Variable) => Variable =
+  // import scorch.nn.Infer.Id
+  // implicit def moduleApply[T <: Module[Id]](m: T): (Variable) => Variable =
+  implicit def moduleApply[T <: Module](m: T): (Variable) => Variable =
     m.forward
 }
 

@@ -46,6 +46,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
     val batchSize = 32
     val numBatches = 2
+    val numEpochs = 5
 
     val (numChannels, imageSize) = (3, 32)
     val inputShape = List(batchSize, numChannels, imageSize, imageSize)
@@ -68,8 +69,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
         x ~> conv ~> relu ~> pool ~> flatten ~> fc ~> relu
     }
 
-    val net = Net()
-    val pNet = scorch.nn.Parallelize(net, 4, 20 seconds)
+    val net = Net().par(32)
 
     val optimizer = Adam(net.parameters, lr = 0.001)
     val loader = new Cifar10DataLoader(miniBatchSize = batchSize,
@@ -78,12 +78,12 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
     val seq = loader.toSeq
 
-    for (epoch <- 0 to 10) {
+    for (epoch <- 1 to numEpochs) {
       seq.zipWithIndex
         .foreach {
           case ((x, y), i) =>
             optimizer.zeroGrad()
-            val yHat = pNet(x)
+            val yHat = net(x)
             val loss = softmaxLoss(yHat, y)
 
             val guessed = ns.argmax(yHat.data, axis = 1)

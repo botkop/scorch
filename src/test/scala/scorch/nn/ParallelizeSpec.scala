@@ -5,7 +5,6 @@ import org.nd4j.linalg.api.buffer.DataBuffer
 import org.nd4j.linalg.factory.Nd4j
 import org.scalatest.{FlatSpec, Matchers}
 import scorch.autograd.Variable
-import scorch.nn.Infer.Id
 import scorch._
 import scorch.autograd.Variable._
 import scorch.TestUtil._
@@ -25,7 +24,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     val batchSize = 32
     val numFeatures = 20
 
-    case class Net() extends Module[Id] {
+    case class Net() extends Module {
       override def forward(x: Variable): Variable = Variable(x.data.copy())
     }
 
@@ -43,7 +42,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     val numFeatures = 20
     val numClasses = 10
 
-    case class Net() extends Module[Id] {
+    case class Net() extends Module {
       val fc = Linear(numFeatures, numClasses)
       override def forward(x: Variable): Variable = x ~> fc ~> relu
     }
@@ -77,7 +76,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     val batchSize = 100
     val numFeatures = 20
     val numClasses = 10
-    case class Net() extends Module[Id] {
+    case class Net() extends Module {
       val fc = Linear(numFeatures, numClasses)
       override def forward(x: Variable): Variable = x ~> fc ~> relu
     }

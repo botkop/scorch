@@ -4,7 +4,7 @@ import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import scorch._
 import scorch.autograd._
-import scorch.nn.Module
+import scorch.nn.SeqModule
 import scorch.optim.Optimizer
 
 import scala.annotation.tailrec
@@ -157,7 +157,7 @@ object DinosaurIslandCharRnn extends App {
     * and a method for generating the initial states
     * @param vs local parameters of the module
     */
-  abstract class BaseRnnCell(vs: Seq[Variable]) extends Module[Seq](vs) {
+  abstract class BaseRnnCell(vs: Seq[Variable]) extends SeqModule(vs) {
 
     /**
       * Number of units in the cell

@@ -1,9 +1,12 @@
 package scorch.nn
 
+import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 
+import scala.concurrent.duration.Duration
 import scala.language.{higherKinds, implicitConversions}
 
+/*
 sealed trait Infer[F[_]]
 trait LowPriority {
   implicit def inferDefault[F[_]]: Infer[F] = new Infer[F] {}
@@ -12,6 +15,7 @@ object Infer extends LowPriority {
   type Id[A] = A
   implicit def inferId: Infer[Id] = new Infer[Id] {}
 }
+ */
 
 abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
 
@@ -56,8 +60,28 @@ abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
 
 }
 
+abstract class Module(localParameters: Seq[Variable] = Nil)
+    extends BaseModule(localParameters)
+    with LazyLogging {
+  def forward(x: Variable): Variable
+  def apply(x: Variable): Variable = forward(x)
+  def par(parallelism: Int = Runtime.getRuntime.availableProcessors / 2,
+          timeOut: Duration = Duration.Inf): Parallelize = {
+    logger.info(s"parallelizing factor = $parallelism")
+    Parallelize(this, parallelism, timeOut)
+  }
+}
+
+abstract class SeqModule(localParameters: Seq[Variable] = Nil)
+    extends BaseModule(localParameters) {
+  def forward(xs: Seq[Variable]): Seq[Variable]
+  def apply(xs: Seq[Variable]): Seq[Variable] = forward(xs)
+}
+
+/*
 abstract class Module[F[_]: Infer](localParameters: Seq[Variable] = Nil)
     extends BaseModule(localParameters) {
   def forward(x: F[Variable]): F[Variable]
   def apply(x: F[Variable]): F[Variable] = forward(x)
 }
+ */

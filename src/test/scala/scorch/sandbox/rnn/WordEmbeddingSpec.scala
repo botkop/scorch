@@ -9,7 +9,6 @@ import scorch.TestUtil._
 import scorch.autograd._
 import scorch.nn._
 import scorch._
-import scorch.nn.Infer.Id
 import scorch.optim.SGD
 
 import scala.language.postfixOps

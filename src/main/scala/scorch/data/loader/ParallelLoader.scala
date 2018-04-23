@@ -4,26 +4,20 @@ import akka.actor.{Actor, ActorSystem, Props}
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.Timeout
-import akka.pattern.ask
-
-import scala.concurrent.duration._
 import botkop.{numsca => ns}
-import botkop.numsca.Tensor
 import scorch._
 import scorch.autograd.Variable
-import scorch.data.loader.NetActor.{Ack, Backward, Complete, Init}
-import scorch.data.loader.ParallelLoader.batchSize
-import scorch.nn.Infer.Id
-import scorch.nn.{Linear, Module}
+import scorch.data.loader.NetActor.{Ack, Complete, Init}
 import scorch.nn.cnn.{Conv2d, MaxPool2d}
-import scorch.optim.{Adam, Optimizer}
+import scorch.nn.{Linear, Module}
+import scorch.optim.Adam
 
-import scala.collection.immutable
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
-class NetActor(net: Module[Id], lossFunction: (Variable, Variable) => Variable)
+class NetActor(net: Module, lossFunction: (Variable, Variable) => Variable)
     extends Actor {
   val optimizer = Adam(net.parameters, lr = 0.01)
   override def receive: Receive = {
@@ -64,7 +58,7 @@ class OptimActor(optimizer: Optimizer) extends Actor {
  */
 
 object NetActor {
-  def props(net: Module[Id]) = Props(new NetActor(net, softmaxLoss))
+  def props(net: Module) = Props(new NetActor(net, softmaxLoss))
   case class Backward(loss: Variable)
 
   case object Init
@@ -104,7 +98,6 @@ object ParallelLoader extends App {
   implicit val system: ActorSystem = ActorSystem("scorch")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val askTimeout: Timeout = Timeout(60 seconds)
-  import system.dispatcher
 
   val net = Net(batchSize)
   val netActor = system.actorOf(NetActor.props(net))
@@ -203,22 +196,20 @@ object FlatLoader extends App {
     }
 }
 
-case class Parallelize(module: Module[Id],
+case class Parallelize(module: Module,
                        parallelism: Int,
                        timeOut: Duration = Duration.Inf)
     extends Module {
 
   // val workers: Seq[Module[Id]] = Seq.fill(parallelism)(module.clone().asInstanceOf[Module[Id]])
-
-  import Parallelize._
   override def forward(x: Variable): Variable = ???
 }
 
 object Parallelize {
 
   case class ParallelizeFunction(x: Variable,
-                                 baseModule: Module[Id],
-                                 workerModules: Seq[Module[Id]],
+                                 baseModule: Module,
+                                 workerModules: Seq[Module],
                                  timeOut: Duration = Duration.Inf)
       extends scorch.autograd.Function {
     import ns._

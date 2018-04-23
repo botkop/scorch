@@ -2,14 +2,14 @@ package scorch.nn.rnn
 
 import botkop.{numsca => ns}
 import scorch.autograd.Variable
-import scorch.nn.Module
+import scorch.nn.SeqModule
 
 /**
   * Extension of MultiVarModule to allow storing the number of previous states
   * and a method for generating initial states
   * @param vs local parameters of the module
   */
-abstract class RnnCellBase(vs: Seq[Variable]) extends Module[Seq](vs) {
+abstract class RnnCellBase(vs: Seq[Variable]) extends SeqModule(vs) {
 
   /**
     * Dimension of hidden states
