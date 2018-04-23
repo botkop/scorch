@@ -16,17 +16,19 @@ object Infer extends LowPriority {
 abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
 
   // by default, obtain submodules through introspection
-  lazy val subModules: Seq[BaseModule] = this.getClass.getDeclaredFields.flatMap {
-    f =>
+  lazy val subModules: Seq[BaseModule] =
+    this.getClass.getDeclaredFields.flatMap { f =>
       f setAccessible true
       f.get(this) match {
         case module: BaseModule => Some(module)
         case _                  => None
       }
-  }
+    }
 
   def parameters: Seq[Variable] =
     localParameters ++ subModules.flatMap(_.parameters)
+
+  def gradients: Seq[Variable] = parameters.map(_.grad)
 
   def zeroGrad(): Unit =
     parameters.map(_.grad).foreach(g => g.data := 0)

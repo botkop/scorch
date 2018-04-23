@@ -89,8 +89,6 @@ case class Net(batchSize: Int) extends Module {
   def flatten(v: Variable): Variable = v.reshape(batchSize, numFlatFeatures)
   val fc = Linear(numFlatFeatures, numClasses)
 
-  def gradients: Seq[Tensor] = parameters.map(_.grad.data)
-
   override def forward(x: Variable): Variable =
     x ~> conv ~> relu ~> pool ~> flatten ~> fc ~> relu
 
@@ -133,8 +131,8 @@ object FlatLoader extends App {
   val workers = Seq.fill(parallelism)(Net(batchSize))
   val optimizer = Adam(base.parameters, lr = 0.001)
 
-  def add(as: Seq[Tensor], bs: Seq[Tensor]): Seq[Tensor] =
-    as.zip(bs).map { case (a, b) => a + b }
+  def add(as: Seq[Variable], bs: Seq[Variable]): Seq[Variable] =
+    as.zip(bs).map { case (a, b) => Variable(a.data + b.data) }
 
   def pass(iteration: Int, worker: Net, x: Variable, y: Variable): Unit = {
     println("pass")
@@ -144,14 +142,14 @@ object FlatLoader extends App {
     loss.backward()
   }
 
-  def updateBaseGradients(allGradients: Seq[Seq[Tensor]]): Unit = {
+  def updateBaseGradients(allGradients: Seq[Seq[Variable]]): Unit = {
     val sums = allGradients.fold(base.gradients) {
       case (a, b) => add(a, b)
     }
     val means = sums.map(_ / parallelism)
     base.gradients.zip(means).foreach {
       case (bg, m) =>
-        bg := m
+        bg.data := m.data
     }
   }
 
@@ -161,7 +159,7 @@ object FlatLoader extends App {
     .foreach { pb: List[((Variable, Variable), Int)] =>
       base.zeroGrad()
 
-      val fs: Seq[Future[Seq[Tensor]]] = workers
+      val fs: Seq[Future[Seq[Variable]]] = workers
         .zip(pb)
         .map {
           case (worker, ((x, y), ix)) =>
@@ -230,37 +228,41 @@ object ParallelModule {
         }
         .toSeq
 
-    // set parameters of all workers to parameters of base module
-    // todo: zeroGrad workers or also set gradients?
-    workerModules.foreach { wm =>
-      wm.parameters.zip(baseModule.parameters).foreach {
-        case (wp, bp) =>
-          wp.data := bp.data
-      }
-    }
-
-    val xs: Seq[Variable] = scatter(x)
-    val fs: Seq[Future[Variable]] = xs.zip(workerModules).map {
+    val fs: Seq[Future[Variable]] = scatter(x).zip(workerModules).map {
       case (v, worker) =>
-        Future(worker(v))
+        Future {
+          workerModules.foreach { wm =>
+            // set parameters of all workers to parameters of base module
+            // set gradients of all workers to gradients of base module
+            wm.parameters.zip(baseModule.parameters).foreach {
+              case (wp, bp) =>
+                wp.data := bp.data
+                wp.grad.data := bp.grad.data
+            }
+          }
+          worker(v)
+        }
     }
-    val results: Seq[Variable] = Await.result(Future.sequence(fs), timeOut)
+    val activations: Seq[Variable] = Await.result(Future.sequence(fs), timeOut)
 
     override def forward(): Variable = {
-      Variable(ns.concatenate(results.map(_.data)), Some(this))
+      Variable(ns.concatenate(activations.map(_.data)), Some(this))
     }
 
     override def backward(gradOutput: Variable): Unit = {
       val gs = scatter(gradOutput)
-      val fs = results.zip(gs).map {
+      val fs = activations.zip(gs).map {
         case (v, g) =>
           Future(v.backward(g))
       }
       Await.result(Future.sequence(fs), timeOut)
 
-      // collect gradients and back prop
-      val allGradients: Seq[Seq[Variable]] = workerModules.map { wm =>
-        wm.parameters.map(_.grad)
+      // collect gradients from workers and accumulate in base module
+      workerModules.foreach { wm =>
+        baseModule.gradients.zip(wm.gradients).foreach {
+          case (bg, wg) =>
+            bg.data += wg.data
+        }
       }
 
     }
