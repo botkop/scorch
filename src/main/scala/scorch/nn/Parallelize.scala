@@ -19,8 +19,9 @@ case class Parallelize(module: Module[Id],
 }
 
 object Parallelize {
+
   case class ParallelizeFunction(x: Variable,
-                                 baseModule: Module[Id],
+                                 module: Module[Id],
                                  parallelism: Int,
                                  timeOut: Duration = Duration.Inf)
       extends scorch.autograd.Function
@@ -40,14 +41,14 @@ object Parallelize {
       case (first, last) =>
         Future {
           val cx = Variable(x.data(first :> last))
-          (cx, baseModule(cx))
+          (cx, module(cx))
         }
     }
 
-    val activations: Seq[(Variable, Variable)] =
+    lazy val activations: Seq[(Variable, Variable)] =
       Await.result(Future.sequence(fs), timeOut)
-    val xs: Seq[Variable] = activations.map(_._1)
-    val predictions: Seq[Variable] = activations.map(_._2)
+    lazy val xs: Seq[Variable] = activations.map(_._1)
+    lazy val predictions: Seq[Variable] = activations.map(_._2)
 
     override def forward(): Variable =
       Variable(ns.concatenate(predictions.map(_.data)), Some(this))

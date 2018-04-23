@@ -85,7 +85,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
 
     def f(a: Variable) =
       ParallelizeFunction(a,
-                          baseModule = net,
+                          module = net,
                           parallelism = 8,
                           timeOut = 20 seconds)
         .forward()
