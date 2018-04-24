@@ -38,9 +38,10 @@ object LeNet5 extends App {
                     pad = 1)
 
     val numFlatFeatures: Int =
-        c5.outputShape(p4.outputShape(c3.outputShape(p2.outputShape(c1.outputShape(List(-1, 1, 28, 28))))))
-      .tail
-      .product
+      c5.outputShape(p4.outputShape(
+          c3.outputShape(p2.outputShape(c1.outputShape(List(-1, 1, 28, 28))))))
+        .tail
+        .product
 
     def flatten(v: Variable): Variable = v.reshape(-1, numFlatFeatures)
 
@@ -58,12 +59,16 @@ object LeNet5 extends App {
   }
 
   val net = Net().par()
-  val optimizer = Nesterov(net.parameters, lr = 2e-2)
+  val optimizer = Adam(net.parameters, lr = 2e-3)
 
-  val batchSize = 16
+  val batchSize = 32
 
-  for (epoch <- 1 to 16) {
+  for (epoch <- 1 to 100) {
+
+    var avgLoss = 0.0
+
     val loader = new MnistDataLoader(mode = "train", miniBatchSize = batchSize)
+
     loader.zipWithIndex.foreach {
       case ((xf, y), iteration) =>
         val x = Variable(xf.data.reshape(-1, 1, 28, 28))
@@ -72,13 +77,20 @@ object LeNet5 extends App {
         val yHat = net(x)
 
         val loss = softmaxLoss(yHat, y)
-        val guessed = ns.argmax(yHat.data, axis = 1)
-        val accuracy = ns.sum(y.data == guessed) / batchSize
-        println(
-          s"$epoch:$iteration: loss: ${loss.data.squeeze()} accuracy: $accuracy")
+        avgLoss += loss.data.squeeze()
+
+        if (iteration % 10 == 0) {
+          avgLoss /= 10
+          val guessed = ns.argmax(yHat.data, axis = 1)
+          val accuracy = ns.sum(y.data == guessed) / batchSize
+          println(
+            s"$epoch:$iteration: loss: $avgLoss accuracy: $accuracy")
+          avgLoss = 0.0
+        }
 
         loss.backward()
         optimizer.step()
     }
   }
+
 }
