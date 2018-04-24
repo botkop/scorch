@@ -32,7 +32,7 @@ object ReadmeConvNet extends App {
   case class ConvReluPoolAffineNetwork() extends Module {
 
     // convolutional layer
-    val conv = Conv2d(numChannels = 3, numFilters = 32, filterSize = 7, weightScale = 1e-3, stride = 1, pad = 1)
+    val conv = Conv2d(numChannels = 3, numFilters = 32, filterSize = 7, weightScale = 1e-3, pad = 1, stride = 1)
     // pooling layer
     val pool = MaxPool2d(poolSize = 2, stride = 2)
 
@@ -41,7 +41,7 @@ object ReadmeConvNet extends App {
     val numFlatFeatures = poolOutShape.tail.product // all dimensions except the batch dimension
 
     // reshape from 3d pooling output to 2d affine input
-    def flatten(v: Variable): Variable = v.reshape(numSamples, numFlatFeatures)
+    def flatten(v: Variable): Variable = v.reshape(-1, numFlatFeatures)
 
     // first affine layer
     val fc1 = Linear(numFlatFeatures, 100)
@@ -53,8 +53,8 @@ object ReadmeConvNet extends App {
       x ~> conv ~> relu ~> pool ~> flatten ~> fc1 ~> fc2
   }
 
-  // instantiate the network
-  val net = ConvReluPoolAffineNetwork()
+  // instantiate the network, and parallelize it
+  val net = ConvReluPoolAffineNetwork().par()
 
   // stochastic gradient descent optimizer for updating the parameters
   val optimizer = SGD(net.parameters, lr = 0.001)
