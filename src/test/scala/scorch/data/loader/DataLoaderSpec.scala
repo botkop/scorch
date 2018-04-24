@@ -44,7 +44,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
   it should "feed a network" in {
 
-    val batchSize = 64
+    val batchSize = 16
     val numBatches = 2
     val numEpochs = 5
     val parallelism = 8
@@ -72,7 +72,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
     val net = Net().par(parallelism)
 
-    val optimizer = Adam(net.parameters, lr = 0.001)
+    val optimizer = Adam(net.parameters, lr = 0.01)
     val loader = new Cifar10DataLoader(miniBatchSize = batchSize,
                                        mode = "train",
                                        take = Some(numBatches * batchSize))

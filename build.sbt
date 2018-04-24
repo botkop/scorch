@@ -9,11 +9,7 @@ lazy val root = (project in file(".")).settings(
     )),
   name := "scorch",
   libraryDependencies += numsca,
-  libraryDependencies += scalaTest % Test,
-  libraryDependencies ++= Seq(
-    "com.typesafe.akka" %% "akka-stream" % "2.5.12",
-    "com.typesafe.akka" %% "akka-stream-testkit" % "2.5.12" % Test
-  )
+  libraryDependencies += scalaTest % Test
 )
 
 crossScalaVersions := Seq("2.11.12", "2.12.4")

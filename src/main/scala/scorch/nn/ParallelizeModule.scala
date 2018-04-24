@@ -4,7 +4,7 @@ import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 
-import scala.collection.parallel.ParSeq
+import scala.collection.parallel.mutable.ParArray
 
 case class ParallelizeModule(module: Module, parallelism: Int) extends Module {
 
@@ -21,12 +21,12 @@ object ParallelizeModule {
     import ns._
 
     val batchSize: Int = x.shape.head
-    val chunkSize: Int = batchSize / parallelism
+    val chunkSize: Int = Math.max(batchSize / parallelism, 1)
 
-    val fromTos: ParSeq[(Int, Int)] = (0 until batchSize)
+    val fromTos: ParArray[(Int, Int)] = (0 until batchSize)
       .sliding(chunkSize, chunkSize)
       .map(s => (s.head, s.last + 1))
-      .toSeq
+      .toArray
       .par
 
     lazy val (xs, predictions) =
