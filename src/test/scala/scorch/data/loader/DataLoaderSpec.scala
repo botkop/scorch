@@ -47,6 +47,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
     val batchSize = 32
     val numBatches = 2
     val numEpochs = 5
+    val parallelism = 4
 
     val (numChannels, imageSize) = (3, 32)
     val inputShape = List(batchSize, numChannels, imageSize, imageSize)
@@ -69,7 +70,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
         x ~> conv ~> relu ~> pool ~> flatten ~> fc ~> relu
     }
 
-    val net = Net().par(32)
+    val net = Net().par(parallelism)
 
     val optimizer = Adam(net.parameters, lr = 0.001)
     val loader = new Cifar10DataLoader(miniBatchSize = batchSize,
