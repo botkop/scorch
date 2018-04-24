@@ -3,7 +3,6 @@ package scorch.nn
 import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 
-import scala.concurrent.duration.Duration
 import scala.language.{higherKinds, implicitConversions}
 
 /*
@@ -65,10 +64,9 @@ abstract class Module(localParameters: Seq[Variable] = Nil)
     with LazyLogging {
   def forward(x: Variable): Variable
   def apply(x: Variable): Variable = forward(x)
-  def par(parallelism: Int = Runtime.getRuntime.availableProcessors / 2,
-          timeOut: Duration = Duration.Inf): Parallelize = {
+  def par(parallelism: Int = Runtime.getRuntime.availableProcessors / 2): ParallelizeModule = {
     logger.info(s"parallelizing factor = $parallelism")
-    Parallelize(this, parallelism, timeOut)
+    ParallelizeModule(this, parallelism)
   }
 }
 

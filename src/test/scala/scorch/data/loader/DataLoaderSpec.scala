@@ -44,10 +44,10 @@ class DataLoaderSpec extends FlatSpec with Matchers {
 
   it should "feed a network" in {
 
-    val batchSize = 32
+    val batchSize = 64
     val numBatches = 2
     val numEpochs = 5
-    val parallelism = 4
+    val parallelism = 8
 
     val (numChannels, imageSize) = (3, 32)
     val inputShape = List(batchSize, numChannels, imageSize, imageSize)

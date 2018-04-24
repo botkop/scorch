@@ -8,13 +8,13 @@ import scorch.autograd.Variable
 import scorch._
 import scorch.autograd.Variable._
 import scorch.TestUtil._
-import scorch.nn.Parallelize.ParallelizeFunction
+import scorch.nn.ParallelizeModule.ParallelizeFunction
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Random
 
-class ParallelizeSpec extends FlatSpec with Matchers {
+class ParallelizeModuleSpec extends FlatSpec with Matchers {
 
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
   ns.rand.setSeed(231)
@@ -29,7 +29,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     }
 
     val net = Net()
-    val p = Parallelize(net, parallelism = 4, timeOut = 2 seconds)
+    val p = ParallelizeModule(net, parallelism = 4)
     val input = Variable(ns.randn(batchSize, numFeatures))
     val yHat = p(input)
 
@@ -52,7 +52,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
       Variable(p.data.copy())
     }
 
-    val p = Parallelize(net, parallelism = 4, timeOut = 2 seconds)
+    val p = ParallelizeModule(net, parallelism = 4)
 
     val input = Variable(ns.randn(batchSize, numFeatures))
 
@@ -73,7 +73,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
   }
 
   "The parallelization function" should "calulate the correct gradients" in {
-    val batchSize = 100
+    val batchSize = 90
     val numFeatures = 20
     val numClasses = 10
     case class Net() extends Module {
@@ -85,8 +85,7 @@ class ParallelizeSpec extends FlatSpec with Matchers {
     def f(a: Variable) =
       ParallelizeFunction(a,
                           module = net,
-                          parallelism = 8,
-                          timeOut = 20 seconds)
+                          parallelism = 4)
         .forward()
 
     val input = Variable(ns.randn(batchSize, numFeatures))
