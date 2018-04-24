@@ -20,6 +20,8 @@ case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
 
 object Conv2d {
 
+  // todo: there is a bug when padding = 0
+
   def apply(numChannels: Int,
             numFilters: Int,
             filterSize: Int,
@@ -111,6 +113,7 @@ object Conv2d {
         dxPad(:>, h1 :> h2, w1 :> w2) += wf * d
         dw(f) += xPad(:>, h1 :> h2, w1 :> w2) * d
         db(f) += d
+
         dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
       }
 

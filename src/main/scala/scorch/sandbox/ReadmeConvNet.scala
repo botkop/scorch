@@ -1,16 +1,17 @@
 package scorch.sandbox
 
 import botkop.{numsca => ns}
+import com.typesafe.scalalogging.LazyLogging
 import scorch._
 import scorch.autograd.Variable
 import scorch.nn.cnn._
 import scorch.nn._
 import scorch.optim.SGD
 
-object ReadmeConvNet extends App {
+object ReadmeConvNet extends App with LazyLogging {
 
   // input layer shape
-  val (numSamples, numChannels, imageSize) = (8, 3, 32)
+  val (numSamples, numChannels, imageSize) = (32, 3, 32)
   val inputShape = List(numSamples, numChannels, imageSize, imageSize)
 
   // output layer
@@ -51,6 +52,8 @@ object ReadmeConvNet extends App {
   val input = Variable(ns.randn(inputShape: _*))
   val target = Variable(ns.randint(numClasses, Array(numSamples, 1)))
 
+  val start = System.currentTimeMillis()
+
   // loop (should reach 100% accuracy in 2 steps)
   for (j <- 0 to 3) {
 
@@ -74,5 +77,9 @@ object ReadmeConvNet extends App {
     // update parameters with gradients
     optimizer.step()
   }
+
+  val duration = System.currentTimeMillis() - start
+
+  logger.info(s"training took $duration ms")
 
 }
