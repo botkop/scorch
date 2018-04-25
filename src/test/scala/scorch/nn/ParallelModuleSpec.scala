@@ -8,13 +8,13 @@ import scorch.autograd.Variable
 import scorch._
 import scorch.autograd.Variable._
 import scorch.TestUtil._
-import scorch.nn.ParallelizeModule.ParallelizeFunction
+import scorch.nn.ParallelModule.ParallelizeFunction
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Random
 
-class ParallelizeModuleSpec extends FlatSpec with Matchers {
+class ParallelModuleSpec extends FlatSpec with Matchers {
 
   Nd4j.setDataType(DataBuffer.Type.DOUBLE)
   ns.rand.setSeed(231)
@@ -29,7 +29,7 @@ class ParallelizeModuleSpec extends FlatSpec with Matchers {
     }
 
     val net = Net()
-    val p = ParallelizeModule(net, parallelism = 4)
+    val p = ParallelModule(net, parallelism = 4)
     val input = Variable(ns.randn(batchSize, numFeatures))
     val yHat = p(input)
 
@@ -52,7 +52,7 @@ class ParallelizeModuleSpec extends FlatSpec with Matchers {
       Variable(p.data.copy())
     }
 
-    val p = ParallelizeModule(net, parallelism = 4)
+    val p = ParallelModule(net, parallelism = 4)
 
     val input = Variable(ns.randn(batchSize, numFeatures))
 

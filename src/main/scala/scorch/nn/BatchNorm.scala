@@ -33,6 +33,12 @@ object BatchNorm {
     BatchNorm(gamma, beta, eps, momentum)
   }
 
+  def apply(d: Int): BatchNorm = {
+    val gamma = Variable(ns.ones(1, d))
+    val beta = Variable(ns.zeros(1, d))
+    BatchNorm(gamma, beta)
+  }
+
   case class BatchNormFunction(x: Variable,
                                eps: Double,
                                momentum: Double,

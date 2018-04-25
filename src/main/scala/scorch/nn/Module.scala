@@ -64,9 +64,9 @@ abstract class Module(localParameters: Seq[Variable] = Nil)
     with LazyLogging {
   def forward(x: Variable): Variable
   def apply(x: Variable): Variable = forward(x)
-  def par(parallelism: Int = Runtime.getRuntime.availableProcessors / 2): ParallelizeModule = {
+  def par(parallelism: Int = Runtime.getRuntime.availableProcessors / 2): ParallelModule = {
     logger.info(s"parallelizing factor = $parallelism")
-    ParallelizeModule(this, parallelism)
+    ParallelModule(this, parallelism)
   }
 }
 

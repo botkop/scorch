@@ -1,7 +1,8 @@
 package scorch.nn.cnn
 
 import botkop.{numsca => ns}
-import botkop.numsca._ // for :> operator
+import botkop.numsca._
+import com.typesafe.scalalogging.LazyLogging
 import org.nd4j.linalg.factory.Nd4j.PadMode
 import scorch.nn.Module
 import scorch.autograd.{Function, Variable}
@@ -18,7 +19,7 @@ case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
     NaiveConv2dFunction(x, w, b, pad, stride).forward()
 }
 
-object Conv2d {
+object Conv2d extends LazyLogging {
 
   // todo: there is a bug when padding = 0
 
@@ -60,6 +61,8 @@ object Conv2d {
 
     override def forward(): Variable = {
 
+      val fwdStart = System.currentTimeMillis()
+
       val out = ns.zeros(numDataPoints, numFilters, hPrime, wPrime)
 
       for {
@@ -82,10 +85,15 @@ object Conv2d {
         out(n, f, hp, wp) := ns.sum(window * wf) + bf
       }
 
+      val fwdEnd = System.currentTimeMillis()
+      logger.debug(s"forward pass took ${fwdEnd - fwdStart} ms.")
+
       Variable(out, Some(this))
     }
 
     override def backward(gradOutput: Variable): Unit = {
+
+      val bwStart = System.currentTimeMillis()
 
       val dOut = gradOutput.data
 
@@ -93,6 +101,7 @@ object Conv2d {
       val dw = zerosLike(w.data)
       val db = zerosLike(b.data)
 
+      /*
       for {
         n <- 0 until numDataPoints
         dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
@@ -116,10 +125,39 @@ object Conv2d {
 
         dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
       }
+       */
+
+      (0 until numDataPoints).foreach { n =>
+        val dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
+        val xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
+
+        (0 until numFilters).foreach { f =>
+          val wf = w.data(f)
+
+          (0 until hPrime).foreach { hp =>
+            val h1 = hp * stride
+            val h2 = h1 + hh
+
+            (0 until wPrime).foreach { wp =>
+              val w1 = wp * stride
+              val w2 = w1 + ww
+              val d = dOut(n, f, hp, wp)
+              dxPad(:>, h1 :> h2, w1 :> w2) += wf * d
+              dw(f) += xPad(:>, h1 :> h2, w1 :> w2) * d
+              db(f) += d
+
+              dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
+            }
+          }
+        }
+      }
 
       x.backward(Variable(dx))
       w.backward(Variable(dw))
       b.backward(Variable(db))
+
+      val bwEnd = System.currentTimeMillis()
+      logger.debug(s"backward pass took ${bwEnd - bwStart} ms.")
     }
   }
 }

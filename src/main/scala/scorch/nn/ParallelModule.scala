@@ -6,14 +6,14 @@ import scorch.autograd.Variable
 
 import scala.collection.parallel.mutable.ParArray
 
-case class ParallelizeModule(module: Module, parallelism: Int) extends Module {
+case class ParallelModule(module: Module, parallelism: Int) extends Module {
 
-  import ParallelizeModule._
+  import ParallelModule._
   override def forward(x: Variable): Variable =
     ParallelizeFunction(x, module, parallelism).forward()
 }
 
-object ParallelizeModule {
+object ParallelModule {
 
   case class ParallelizeFunction(x: Variable, module: Module, parallelism: Int)
       extends scorch.autograd.Function
