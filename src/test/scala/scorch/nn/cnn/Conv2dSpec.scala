@@ -97,4 +97,36 @@ class Conv2dSpec extends FlatSpec with Matchers {
     oneOpGradientCheck(fx, x, 1e-5)
   }
 
+
+
+  "Im2ColConv2dFunction" should "pass forward" in {
+
+    val xShape = List(2, 3, 4, 4)
+    val wShape = List(3, 3, 4, 4)
+    val x =
+      Variable(ns.linspace(-0.1, 0.5, num = xShape.product).reshape(xShape: _*))
+    val w =
+      Variable(ns.linspace(-0.2, 0.3, num = wShape.product).reshape(wShape: _*))
+    val b = Variable(ns.linspace(-0.1, 0.2, num = 3))
+    val pad = 1
+    val stride = 2
+
+    val out = Conv2d.Im2colConv2dFunction(x, w, b, pad, stride).forward()
+
+    println(out)
+    println(out.shape)
+
+    val correctOut = ns
+      .array(-0.08759809, -0.10987781, -0.18387192, -0.2109216, 0.21027089,
+        0.21661097, 0.22847626, 0.23004637, 0.50813986, 0.54309974, 0.64082444,
+        0.67101435, -0.98053589, -1.03143541, -1.19128892, -1.24695841,
+        0.69108355, 0.66880383, 0.59480972, 0.56776003, 2.36270298, 2.36904306,
+        2.38090835, 2.38247847)
+      .reshape(2, 3, 2, 2)
+
+    val error = scorch.TestUtil.relError(out.data, correctOut)
+    error should be < 3e-8
+  }
+
+
 }

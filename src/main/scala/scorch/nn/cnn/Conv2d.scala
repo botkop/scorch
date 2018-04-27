@@ -3,6 +3,9 @@ package scorch.nn.cnn
 import botkop.{numsca => ns}
 import botkop.numsca._
 import com.typesafe.scalalogging.LazyLogging
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.convolution.Convolution
+import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.factory.Nd4j.PadMode
 import scorch.nn.Module
 import scorch.autograd.{Function, Variable}
@@ -16,7 +19,8 @@ case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
     Conv2d.outputShape(inputShape, w.shape, pad, stride)
 
   override def forward(x: Variable): Variable =
-    NaiveConv2dFunction(x, w, b, pad, stride).forward()
+    Im2colConv2dFunction(x, w, b, pad, stride).forward()
+    // NaiveConv2dFunction(x, w, b, pad, stride).forward()
 }
 
 object Conv2d extends LazyLogging {
@@ -39,11 +43,61 @@ object Conv2d extends LazyLogging {
                   wShape: List[Int],
                   pad: Int,
                   stride: Int): List[Int] = {
-    val List(numFilters, _, hh, ww) = wShape
+    val List(numFilters, _, filterHeight, filterWidth) = wShape
     val List(numSamples, _, height, width) = xShape
-    val hPrime: Int = 1 + (height + 2 * pad - hh) / stride
-    val wPrime: Int = 1 + (width + 2 * pad - ww) / stride
+    val hPrime: Int = 1 + (height + 2 * pad - filterHeight) / stride
+    val wPrime: Int = 1 + (width + 2 * pad - filterWidth) / stride
     List(numSamples, numFilters, hPrime, wPrime)
+  }
+
+  case class Im2colConv2dFunction(x: Variable,
+                                  w: Variable,
+                                  b: Variable,
+                                  pad: Int,
+                                  stride: Int)
+      extends Function {
+
+    val List(batchSize, numFilters, hPrime, wPrime) =
+      outputShape(x.shape, w.shape, pad, stride)
+
+    val List(kernelHeight, kernelWidth) = w.shape.takeRight(2)
+
+    override def forward(): Variable = {
+
+
+      val xCols: Tensor = new Tensor(
+        Convolution.im2col(x.data.array,
+                           kernelHeight,
+                           kernelWidth,
+                           stride,
+                           stride,
+                           pad,
+                           pad,
+          false))
+
+      println(x.shape)
+      println(x)
+      println()
+      println(xCols.shape.toList)
+      println(xCols)
+      println("!!!!!!!!!!!!!!!!!")
+      // println(xCols.transpose(1, 2, 3, 4, 5, 0).shape.toList)
+      // println(w.shape.toList)
+
+      val ws = w.data.reshape(w.shape.head, -1)
+      // val xt = xCols.transpose(3, 4, 5, 0, 1, 2).reshape(ws.shape.last, -1)
+      val xt = xCols.reshape(ws.shape.last, -1)
+
+      val res = ws.dot(xt) + b.data.reshape(-1, 1)
+
+      val out = res.reshape(w.shape.head, hPrime, wPrime, x.shape.head).transpose(3, 0, 1, 2)
+
+      Variable(out, Some(this))
+
+
+    }
+
+    override def backward(gradOutput: Variable): Unit = ???
   }
 
   case class NaiveConv2dFunction(x: Variable,
