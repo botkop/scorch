@@ -20,7 +20,7 @@ case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
 
   override def forward(x: Variable): Variable =
     Im2colConv2dFunction(x, w, b, pad, stride).forward()
-    // NaiveConv2dFunction(x, w, b, pad, stride).forward()
+  // NaiveConv2dFunction(x, w, b, pad, stride).forward()
 }
 
 object Conv2d extends LazyLogging {
@@ -50,6 +50,7 @@ object Conv2d extends LazyLogging {
     List(numSamples, numFilters, hPrime, wPrime)
   }
 
+  /*
   case class Im2colConv2dFunction(x: Variable,
                                   w: Variable,
                                   b: Variable,
@@ -64,7 +65,6 @@ object Conv2d extends LazyLogging {
 
     override def forward(): Variable = {
 
-
       val xCols: Tensor = new Tensor(
         Convolution.im2col(x.data.array,
                            kernelHeight,
@@ -73,7 +73,7 @@ object Conv2d extends LazyLogging {
                            stride,
                            pad,
                            pad,
-          false))
+                           false))
 
       println(x.shape)
       println(x)
@@ -90,15 +90,17 @@ object Conv2d extends LazyLogging {
 
       val res = ws.dot(xt) + b.data.reshape(-1, 1)
 
-      val out = res.reshape(w.shape.head, hPrime, wPrime, x.shape.head).transpose(3, 0, 1, 2)
+      val out = res
+        .reshape(w.shape.head, hPrime, wPrime, x.shape.head)
+        .transpose(3, 0, 1, 2)
 
       Variable(out, Some(this))
-
 
     }
 
     override def backward(gradOutput: Variable): Unit = ???
   }
+   */
 
   case class NaiveConv2dFunction(x: Variable,
                                  w: Variable,
@@ -213,5 +215,104 @@ object Conv2d extends LazyLogging {
       val bwEnd = System.currentTimeMillis()
       logger.debug(s"backward pass took ${bwEnd - bwStart} ms.")
     }
+  }
+
+  /**
+    * @param x image matrix to be translated into columns, (C,H,W)
+    * @param hh filter height
+    * @param ww filter width
+    * @param stride stride
+    * @return col: (new_h*new_w,hh*ww*C) matrix, each column is a cube that will convolve with a filter
+    *              new_h = (H-hh) // stride + 1, new_w = (W-ww) // stride + 1
+    */
+  def im2col(x: Tensor, hh: Int, ww: Int, stride: Int): Tensor = {
+
+    val Array(c, h, w) = x.shape
+    val newH = (h - hh) / stride + 1
+    val newW = w - ww / stride + 1
+
+
+    val col = ns.zeros(newH * newW, c * hh * ww)
+    println(col.shape.toList)
+    println(x.shape.toList)
+
+    for {
+      i <- 0 until newH
+      j <- 0 until newW
+    } {
+      val patch =
+        x(:>, (i * stride) :> (i * stride + hh), (j * stride) :> (j * stride + ww))
+
+
+      println(col(i * newW + j).shape.toList)
+      println(patch.shape.toList)
+
+      col(i * newW + j) := patch.reshape(1, -1)
+    }
+
+    col
+  }
+
+  /**
+    * Args:
+    * mul: (h_prime*w_prime*w,F) matrix, each col should be reshaped to C*h_prime*w_prime when C>0, or h_prime*w_prime when C = 0
+    * h_prime: reshaped filter height
+    * w_prime: reshaped filter width
+    * C: reshaped filter channel, if 0, reshape the filter to 2D, Otherwise reshape it to 3D
+    * Returns:
+    * if C == 0: (F,h_prime,w_prime) matrix
+    * Otherwise: (F,C,h_prime,w_prime) matrix
+    */
+  def col2im(mul: Tensor, hPrime: Int, wPrime: Int, c: Int): Tensor = {
+
+    val f = mul.shape(1)
+
+    if (c == 1) {
+      val out = ns.zeros(f, hPrime, wPrime)
+      for (i <- 0 until f) {
+        val col = mul(:>, i)
+        out(i) := col.reshape(hPrime, wPrime)
+      }
+      out
+    } else {
+      val out = ns.zeros(f, c, hPrime, wPrime)
+      for (i <- 0 until f) {
+        val col = mul(:>, i)
+        out(i) := col.reshape(c, hPrime, wPrime)
+      }
+      out
+    }
+  }
+
+  case class Im2colConv2dFunction(x: Variable,
+                                  w: Variable,
+                                  b: Variable,
+                                  pad: Int,
+                                  stride: Int)
+      extends Function {
+
+    override def forward(): Variable = {
+      val List(batchSize, c, height, width) = x.shape
+      val List(f, _, hh, ww) = w.shape
+
+      val hPrime = (height + 2 * pad - hh) / stride + 1
+      val wPrime = (width + 2 * pad - ww) / stride + 1
+
+      val padArea = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
+
+      val out = ns.zeros(batchSize, f, hPrime, wPrime)
+
+      for (imNum <- 0 until batchSize) {
+        val im = x.data(imNum)
+        val imPad = ns.pad(im, padArea, PadMode.CONSTANT)
+        val imCol = im2col(imPad, hh, ww, stride)
+        val filterCol = w.data.reshape(f, -1).T
+        val mul = imCol.dot(filterCol.T) + b.data
+        out(imNum) := col2im(mul, hPrime, wPrime, 1)
+      }
+      Variable(out, Some(this))
+    }
+
+    override def backward(gradOutput: Variable): Unit = ???
   }
 }
