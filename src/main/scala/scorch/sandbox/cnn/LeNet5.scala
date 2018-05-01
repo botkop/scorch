@@ -1,6 +1,7 @@
 package scorch.sandbox.cnn
 
 import botkop.{numsca => ns}
+import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 import scorch.nn._
 import scorch.nn.cnn.{Conv2d, MaxPool2d}
@@ -8,7 +9,7 @@ import scorch._
 import scorch.data.loader.{Cifar10DataLoader, DataLoader, MnistDataLoader}
 import scorch.optim.{Adam, Nesterov, Optimizer}
 
-object LeNet5 extends App {
+object LeNet5 extends App with LazyLogging {
 
   case class Net() extends Module {
 
@@ -83,11 +84,13 @@ object LeNet5 extends App {
     val p1 = MaxPool2d(poolSize = 2, stride = 2)
     val inputShape = List(-1, 3, 32, 32)
     val numFlatFeatures: Int =
-      p1.outputShape(c1.outputShape(inputShape)).tail.product
+      // c1.outputShape(inputShape).tail.product
+    p1.outputShape(c1.outputShape(inputShape)).tail.product
     def flatten(v: Variable): Variable = v.reshape(-1, numFlatFeatures)
     val fc1 = Linear(numFlatFeatures, 10)
     override def forward(x: Variable): Variable =
-      x ~> c1 ~> relu ~> p1 ~> flatten ~> fc1 ~> relu
+//      x ~> c1 ~> relu ~> flatten ~> fc1 ~> relu
+     x ~> c1 ~> relu ~> p1 ~> flatten ~> fc1 ~> relu
   }
 
   case class FcNet2() extends Module {
@@ -102,12 +105,12 @@ object LeNet5 extends App {
   }
 
   val batchSize = 128
-  val printEvery = 100
+  val printEvery = 10
 
   // val net = Net().par()
   // val net = FcNet().par()
-  // val net = CNN1().par(8)
-  val net = FcNet2().par()
+  val net = CNN1().par()
+  // val net = FcNet2().par()
 
   val optimizer = Adam(net.parameters, lr = 1e-3)
 
@@ -123,12 +126,9 @@ object LeNet5 extends App {
   def loader =
     new Cifar10DataLoader(mode = "train",
                           miniBatchSize = batchSize,
-                          seed = System.currentTimeMillis(),
-                          tailShape = Seq(3 * 32 * 32))
+                          seed = System.currentTimeMillis())
   def testLoader =
-    new Cifar10DataLoader(mode = "dev",
-                          miniBatchSize = batchSize,
-                          tailShape = Seq(3 * 32 * 32))
+    new Cifar10DataLoader(mode = "dev", miniBatchSize = batchSize)
 
   loop(net, optimizer, loader, testLoader, batchSize, printEvery)
 
@@ -146,8 +146,9 @@ object LeNet5 extends App {
       var epochAvgAccuracy = 0.0
       var epochAvgLoss = 0.0
       var iteration = 0
+      var iterationStart = System.currentTimeMillis()
 
-      println(s"starting epoch $epoch")
+      logger.info(s"starting epoch $epoch")
       var epochStart = System.currentTimeMillis()
 
       trainLoader.foreach {
@@ -164,12 +165,14 @@ object LeNet5 extends App {
             avgLoss /= printEvery
             val guessed = ns.argmax(yHat.data, axis = 1)
             val accuracy = ns.sum(y.data == guessed) / batchSize
-            println(s"$epoch:$iteration: loss: $avgLoss accuracy: $accuracy")
+            val iterationEnd = System.currentTimeMillis()
+            logger.info(s"$epoch:$iteration: loss: $avgLoss accuracy: $accuracy duration: ${iterationEnd - iterationStart} ms.")
 
             epochAvgAccuracy += accuracy
             epochAvgLoss += avgLoss
 
             avgLoss = 0.0
+            iterationStart = iterationEnd
           }
 
           loss.backward()
@@ -177,28 +180,24 @@ object LeNet5 extends App {
       }
 
       val epochDuration = System.currentTimeMillis() - epochStart
-      println(s"epoch took $epochDuration ms")
+      logger.info(s"epoch took $epochDuration ms")
       evaluateModel(model, testLoader)
-      println(
-        s"training accuracy = ${epochAvgAccuracy / (iteration / printEvery)}")
-      println(s"epoch loss = ${epochAvgLoss / (iteration / printEvery)}")
-      println("================")
+      logger.info(s"training accuracy = ${epochAvgAccuracy / (iteration / printEvery)}")
+      logger.info(s"epoch loss = ${epochAvgLoss / (iteration / printEvery)}")
+      logger.info("================")
 
     }
   }
 
   def evaluateModel(model: Module, testLoader: DataLoader): Unit = {
-
-    var avgAccuracy = 0.0
-    testLoader.par.foreach {
-      case (x, y) =>
-        val yHat = model(x)
-        val guessed = ns.argmax(yHat.data, axis = 1)
-        val accuracy = ns.sum(y.data == guessed) / x.shape.head
-        avgAccuracy += accuracy
-    }
-    avgAccuracy /= testLoader.size
-    println(s"evaluation accuracy = $avgAccuracy")
+    val avgAccuracy =
+      testLoader.par.map {
+        case (x, y) =>
+          val yHat = model(x)
+          val guessed = ns.argmax(yHat.data, axis = 1)
+          ns.sum(y.data == guessed) / x.shape.head
+      }.sum / testLoader.size
+    logger.info(s"evaluation accuracy = $avgAccuracy")
   }
 
 }

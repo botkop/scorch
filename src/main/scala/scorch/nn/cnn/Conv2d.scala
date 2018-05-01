@@ -1,14 +1,14 @@
 package scorch.nn.cnn
 
-import botkop.{numsca => ns}
 import botkop.numsca._
+import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.convolution.Convolution
-import org.nd4j.linalg.factory.Nd4j
 import org.nd4j.linalg.factory.Nd4j.PadMode
-import scorch.nn.Module
 import scorch.autograd.{Function, Variable}
+import scorch.nn.Module
+
+import scala.collection.immutable
+import scala.collection.parallel.immutable.ParSeq
 
 case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
     extends Module(Seq(w, b)) {
@@ -20,7 +20,6 @@ case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
 
   override def forward(x: Variable): Variable =
     Im2colConv2dFunction(x, w, b, pad, stride).forward()
-  // NaiveConv2dFunction(x, w, b, pad, stride).forward()
 }
 
 object Conv2d extends LazyLogging {
@@ -49,58 +48,6 @@ object Conv2d extends LazyLogging {
     val wPrime: Int = 1 + (width + 2 * pad - filterWidth) / stride
     List(numSamples, numFilters, hPrime, wPrime)
   }
-
-  /*
-  case class Im2colConv2dFunction(x: Variable,
-                                  w: Variable,
-                                  b: Variable,
-                                  pad: Int,
-                                  stride: Int)
-      extends Function {
-
-    val List(batchSize, numFilters, hPrime, wPrime) =
-      outputShape(x.shape, w.shape, pad, stride)
-
-    val List(kernelHeight, kernelWidth) = w.shape.takeRight(2)
-
-    override def forward(): Variable = {
-
-      val xCols: Tensor = new Tensor(
-        Convolution.im2col(x.data.array,
-                           kernelHeight,
-                           kernelWidth,
-                           stride,
-                           stride,
-                           pad,
-                           pad,
-                           false))
-
-      println(x.shape)
-      println(x)
-      println()
-      println(xCols.shape.toList)
-      println(xCols)
-      println("!!!!!!!!!!!!!!!!!")
-      // println(xCols.transpose(1, 2, 3, 4, 5, 0).shape.toList)
-      // println(w.shape.toList)
-
-      val ws = w.data.reshape(w.shape.head, -1)
-      // val xt = xCols.transpose(3, 4, 5, 0, 1, 2).reshape(ws.shape.last, -1)
-      val xt = xCols.reshape(ws.shape.last, -1)
-
-      val res = ws.dot(xt) + b.data.reshape(-1, 1)
-
-      val out = res
-        .reshape(w.shape.head, hPrime, wPrime, x.shape.head)
-        .transpose(3, 0, 1, 2)
-
-      Variable(out, Some(this))
-
-    }
-
-    override def backward(gradOutput: Variable): Unit = ???
-  }
-   */
 
   case class NaiveConv2dFunction(x: Variable,
                                  w: Variable,
@@ -157,32 +104,6 @@ object Conv2d extends LazyLogging {
       val dw = zerosLike(w.data)
       val db = zerosLike(b.data)
 
-      /*
-      for {
-        n <- 0 until numDataPoints
-        dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
-        xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
-
-        f <- 0 until numFilters
-        wf = w.data(f)
-
-        hp <- 0 until hPrime
-        h1 = hp * stride
-        h2 = h1 + hh
-
-        wp <- 0 until wPrime
-        w1 = wp * stride
-        w2 = w1 + ww
-      } {
-        val d = dOut(n, f, hp, wp)
-        dxPad(:>, h1 :> h2, w1 :> w2) += wf * d
-        dw(f) += xPad(:>, h1 :> h2, w1 :> w2) * d
-        db(f) += d
-
-        dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
-      }
-       */
-
       (0 until numDataPoints).foreach { n =>
         val dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
         val xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
@@ -201,11 +122,10 @@ object Conv2d extends LazyLogging {
               dxPad(:>, h1 :> h2, w1 :> w2) += wf * d
               dw(f) += xPad(:>, h1 :> h2, w1 :> w2) * d
               db(f) += d
-
-              dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
             }
           }
         }
+        dx(n) := dxPad(:>, 1 :> -1, 1 :> -1)
       }
 
       x.backward(Variable(dx))
@@ -229,23 +149,18 @@ object Conv2d extends LazyLogging {
 
     val Array(c, h, w) = x.shape
     val newH = (h - hh) / stride + 1
-    val newW = w - ww / stride + 1
-
+    val newW = (w - ww) / stride + 1
 
     val col = ns.zeros(newH * newW, c * hh * ww)
-    println(col.shape.toList)
-    println(x.shape.toList)
 
     for {
       i <- 0 until newH
       j <- 0 until newW
     } {
       val patch =
-        x(:>, (i * stride) :> (i * stride + hh), (j * stride) :> (j * stride + ww))
-
-
-      println(col(i * newW + j).shape.toList)
-      println(patch.shape.toList)
+        x(:>,
+          (i * stride) :> (i * stride + hh),
+          (j * stride) :> (j * stride + ww))
 
       col(i * newW + j) := patch.reshape(1, -1)
     }
@@ -284,6 +199,38 @@ object Conv2d extends LazyLogging {
     }
   }
 
+  /**
+    * @param dimCol gradients for imCol,(hPrime * wPrime, hh * ww *c)
+    * @param hPrime height for the feature map
+    * @param wPrime width for the feature map
+    * @param stride stride
+    * @param hh filter height
+    * @param ww filter width
+    * @param c number of channels
+    * @return gradients for x, (C,H,W)
+    */
+  def col2imBack(dimCol: Tensor,
+                 hPrime: Int,
+                 wPrime: Int,
+                 stride: Int,
+                 hh: Int,
+                 ww: Int,
+                 c: Int): Tensor = {
+
+    val h = (hPrime - 1) * stride + hh
+    val w = (wPrime - 1) * stride + ww
+    val dx = ns.zeros(c, h, w)
+
+    for (i <- 0 until hPrime * wPrime) {
+      val row = dimCol(i)
+      val hStart = (i / wPrime) * stride
+      val wStart = (i % wPrime) * stride
+      dx(:>, hStart :> hStart + hh, wStart :> wStart + ww) +=
+        ns.reshape(row, c, hh, ww)
+    }
+    dx
+  }
+
   case class Im2colConv2dFunction(x: Variable,
                                   w: Variable,
                                   b: Variable,
@@ -291,28 +238,71 @@ object Conv2d extends LazyLogging {
                                   stride: Int)
       extends Function {
 
+    private val initStart = System.currentTimeMillis()
+
+    val List(batchSize, c, height, width) = x.shape
+    val List(f, _, hh, ww) = w.shape
+
+    val hPrime: Int = (height + 2 * pad - hh) / stride + 1
+    val wPrime: Int = (width + 2 * pad - ww) / stride + 1
+
+    val padArea = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
+
+    val imCols: immutable.Seq[(Int, Tensor)] = for {
+      imNum <- 0 until batchSize
+      im = x.data(imNum)
+      imPad = ns.pad(im, padArea, PadMode.CONSTANT)
+      col = im2col(imPad, hh, ww, stride)
+    } yield {
+      (imNum, col)
+    }
+
+    val filterCol: Tensor = w.data.reshape(f, -1).T
+
+    private val initEnd = System.currentTimeMillis()
+    logger.debug(s"initialization took ${initEnd - initStart} ms.")
+
     override def forward(): Variable = {
-      val List(batchSize, c, height, width) = x.shape
-      val List(f, _, hh, ww) = w.shape
-
-      val hPrime = (height + 2 * pad - hh) / stride + 1
-      val wPrime = (width + 2 * pad - ww) / stride + 1
-
-      val padArea = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
-
+      val fwdStart = System.currentTimeMillis()
       val out = ns.zeros(batchSize, f, hPrime, wPrime)
-
-      for (imNum <- 0 until batchSize) {
-        val im = x.data(imNum)
-        val imPad = ns.pad(im, padArea, PadMode.CONSTANT)
-        val imCol = im2col(imPad, hh, ww, stride)
-        val filterCol = w.data.reshape(f, -1).T
-        val mul = imCol.dot(filterCol.T) + b.data
+      for ((imNum, imCol) <- imCols) {
+        val mul = imCol.dot(filterCol) + b.data
         out(imNum) := col2im(mul, hPrime, wPrime, 1)
       }
+      val fwdEnd = System.currentTimeMillis()
+      logger.debug(s"forward pass took ${fwdEnd - fwdStart} ms.")
       Variable(out, Some(this))
     }
 
-    override def backward(gradOutput: Variable): Unit = ???
+    override def backward(gradOutput: Variable): Unit = {
+
+      val bwStart = System.currentTimeMillis()
+
+      val dOut = gradOutput.data
+
+      val dx = zerosLike(x.data)
+      val dw = zerosLike(w.data)
+      val db = zerosLike(b.data)
+
+      for ((i, imCol) <- imCols) {
+        val dMul = ns.reshape(dOut(i), f, -1).T
+        db += ns.sum(dMul, axis = 0)
+
+        val dFilterCol = imCol.T.dot(dMul)
+        val dimCol = dMul.dot(filterCol.T)
+
+        val dxPadded = col2imBack(dimCol, hPrime, wPrime, stride, hh, ww, c)
+        dx(i) := dxPadded(:>, pad :> height + pad, pad :> width + pad)
+
+        dw += ns.reshape(dFilterCol.T, f, c, hh, ww)
+      }
+
+      x.backward(Variable(dx))
+      w.backward(Variable(dw))
+      b.backward(Variable(db))
+
+      val bwEnd = System.currentTimeMillis()
+      logger.debug(s"backward pass took ${bwEnd - bwStart} ms.")
+    }
   }
 }

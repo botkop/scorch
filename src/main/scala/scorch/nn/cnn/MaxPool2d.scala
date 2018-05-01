@@ -26,10 +26,10 @@ object MaxPool2d {
                   poolHeight: Int,
                   poolWidth: Int,
                   stride: Int): List[Int] = {
-    val List(numDataPoints, numChannels, height, width) = inputShape
-    val hPrime: Int = 1 + (height - poolHeight) / stride
-    val wPrime: Int = 1 + (width - poolWidth) / stride
-    List(numDataPoints, numChannels, hPrime, wPrime)
+    val List(n, c, h, w) = inputShape
+    val hPrime = 1 + (h - poolHeight) / stride
+    val wPrime = 1 + (w - poolWidth) / stride
+    List(n, c, hPrime, wPrime)
   }
 
   case class NaiveMaxPool2dFunction(x: Variable,
@@ -38,16 +38,15 @@ object MaxPool2d {
                                     stride: Int)
       extends Function {
 
-    val List(numDataPoints, numChannels, hPrime, wPrime) =
+    val List(batchSize, numChannels, hPrime, wPrime) =
       outputShape(x.shape, poolHeight, poolWidth, stride)
 
     override def forward(): Variable = {
 
-      val out = ns.zeros(numDataPoints, numChannels, hPrime, wPrime)
+      val out = ns.zeros(batchSize, numChannels, hPrime, wPrime)
 
       for {
-        n <- 0 until numDataPoints
-        c <- 0 until numChannels
+        n <- 0 until batchSize
 
         h <- 0 until hPrime
         h1 = h * stride
@@ -71,7 +70,7 @@ object MaxPool2d {
       val dOut = gradOutput.data
 
       for {
-        n <- 0 until numDataPoints
+        n <- 0 until batchSize
         c <- 0 until numChannels
 
         h <- 0 until hPrime

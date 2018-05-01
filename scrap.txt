@@ -1,3 +1,39 @@
+1:10: loss: 2.2915698289871216 accuracy: 0.1171875 duration: 88072 ms.
+1:20: loss: 2.245325207710266 accuracy: 0.1796875 duration: 176792 ms.
+1:30: loss: 2.2091324806213377 accuracy: 0.21875 duration: 263850 ms.
+1:40: loss: 2.166573643684387 accuracy: 0.234375 duration: 350876 ms.
+
+
+2018-05-01 11:14:19,273 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:10: loss: 2.287407875061035 accuracy: 0.171875 duration: 81427 ms.
+2018-05-01 11:15:45,166 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:20: loss: 2.2399443626403808 accuracy: 0.1875 duration: 85893 ms.
+2018-05-01 11:17:11,915 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:30: loss: 2.207755136489868 accuracy: 0.21875 duration: 86749 ms.
+2018-05-01 11:18:38,611 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:40: loss: 2.1901093244552614 accuracy: 0.1796875 duration: 86696 ms.
+
+batchSize = 128
+par = 4
+2018-05-01 11:33:04,512 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:10: loss: 2.293930506706238 accuracy: 0.140625 duration: 84542 ms.
+2018-05-01 11:34:31,409 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:20: loss: 2.2760065317153932 accuracy: 0.1484375 duration: 86897 ms.
+2018-05-01 11:35:59,488 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:30: loss: 2.246646547317505 accuracy: 0.1953125 duration: 88079 ms.
+
+batchSize = 128
+par = 8
+2018-05-01 11:38:21,964 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:10: loss: 2.2916112661361696 accuracy: 0.1328125 duration: 83810 ms.
+2018-05-01 11:39:50,174 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:20: loss: 2.270481753349304 accuracy: 0.1875 duration: 88210 ms.
+2018-05-01 11:41:17,313 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:30: loss: 2.2637011051177978 accuracy: 0.171875 duration: 87139 ms.
+
+batchSize = 256
+par = 4
+2018-05-01 11:44:56,798 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:10: loss: 2.2893950939178467 accuracy: 0.12109375 duration: 168209 ms.
+2018-05-01 11:47:50,127 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:20: loss: 2.279911971092224 accuracy: 0.1328125 duration: 173329 ms.
+
+batchSize = 256
+par = 8
+2018-05-01 11:52:20,983 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:10: loss: 2.275270128250122 accuracy: 0.15625 duration: 165857 ms.
+2018-05-01 11:55:15,282 [INFO] from scorch.sandbox.cnn.LeNet5$ in main - 1:20: loss: 2.23012433052063 accuracy: 0.2109375 duration: 174299 ms.
+
+
+
+
 package scorch.data.loader
 
 import akka.actor.{Actor, ActorSystem, Props}

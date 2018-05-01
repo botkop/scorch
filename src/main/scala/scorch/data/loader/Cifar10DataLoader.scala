@@ -39,6 +39,9 @@ class Cifar10DataLoader(mode: String,
     (numSamples / miniBatchSize) +
       (if (numSamples % miniBatchSize == 0) 0 else 1)
 
+  logger.info(s"number of samples: $numSamples")
+  logger.info(s"number of batches: $numBatches")
+
   override def iterator: Iterator[(Variable, Variable)] = {
     val batches: Iterator[List[File]] = new Random(seed)
       .shuffle(files)
@@ -49,7 +52,7 @@ class Cifar10DataLoader(mode: String,
       val batchSize = sampleFiles.length
 
       // todo: maybe use akka streams here
-      val yxs = sampleFiles.par map deserialize
+      val yxs = sampleFiles map deserialize
 
       val xData = yxs flatMap (_.x) toArray
       val yData = yxs map (_.y) toArray

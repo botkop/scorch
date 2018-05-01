@@ -97,8 +97,6 @@ class Conv2dSpec extends FlatSpec with Matchers {
     oneOpGradientCheck(fx, x, 1e-5)
   }
 
-
-
   "Im2ColConv2dFunction" should "pass forward" in {
 
     val xShape = List(2, 3, 4, 4)
@@ -128,5 +126,23 @@ class Conv2dSpec extends FlatSpec with Matchers {
     error should be < 3e-8
   }
 
+  it should "pass backward" in {
+    val x = Variable(ns.randn(4, 3, 5, 5))
+    val w = Variable(ns.randn(2, 3, 3, 3))
+    val b = Variable(ns.randn(2))
+    val stride = 1
+    val pad = 1
+
+    def fx(a: Variable) =
+      Conv2d.Im2colConv2dFunction(a, w, b, pad, stride).forward()
+    def fw(a: Variable) =
+      Conv2d.Im2colConv2dFunction(x, a, b, pad, stride).forward()
+    def fb(a: Variable) =
+      Conv2d.Im2colConv2dFunction(x, w, a, pad, stride).forward()
+
+    oneOpGradientCheck(fx, x)
+    oneOpGradientCheck(fw, w.copy())
+    oneOpGradientCheck(fb, b.copy())
+  }
 
 }
