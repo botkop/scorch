@@ -8,7 +8,6 @@ import scorch.autograd.{Function, Variable}
 import scorch.nn.Module
 
 import scala.collection.immutable
-import scala.collection.parallel.immutable.ParSeq
 
 case class Conv2d(w: Variable, b: Variable, pad: Int, stride: Int)
     extends Module(Seq(w, b)) {
@@ -250,10 +249,10 @@ object Conv2d extends LazyLogging {
 
     val imCols: immutable.Seq[(Int, Tensor)] = for {
       imNum <- 0 until batchSize
-      im = x.data(imNum)
-      imPad = ns.pad(im, padArea, PadMode.CONSTANT)
-      col = im2col(imPad, hh, ww, stride)
     } yield {
+      val im = x.data(imNum)
+      val imPad = ns.pad(im, padArea, PadMode.CONSTANT)
+      val col = im2col(imPad, hh, ww, stride)
       (imNum, col)
     }
 
