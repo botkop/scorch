@@ -3,8 +3,8 @@ package scorch.autograd
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
-import scorch.nn.cnn.MaxPool2d
 import scorch.nn.Module
+import scorch.nn.cnn.MaxPool2d
 
 import scala.language.implicitConversions
 

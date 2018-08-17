@@ -1,4 +1,5 @@
 import scorch.autograd._
+import scorch.nn.Dropout
 
 package object scorch {
   implicit class AutoGradDoubleOps(d: Double) {

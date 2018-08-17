@@ -9,6 +9,8 @@ import scorch._
 import scorch.data.loader.{Cifar10DataLoader, DataLoader, MnistDataLoader}
 import scorch.optim.{Adam, Nesterov, Optimizer}
 
+import scala.util.Random
+
 object LeNet5 extends App with LazyLogging {
 
   case class Net() extends Module {
@@ -104,13 +106,17 @@ object LeNet5 extends App with LazyLogging {
       x ~> fc1 ~> relu ~> drop ~> fc2 ~> relu
   }
 
-  val batchSize = 128
-  val printEvery = 10
+  // val batchSize = 128
+  val batchSize = 8
+  val printEvery = 5
 
   // val net = Net().par()
   // val net = FcNet().par()
   val net = CNN1().par()
   // val net = FcNet2().par()
+
+  // set in training mode for drop out / batch norm
+  net.train()
 
   val optimizer = Adam(net.parameters, lr = 1e-3)
 
@@ -124,9 +130,8 @@ object LeNet5 extends App with LazyLogging {
    */
 
   def loader =
-    new Cifar10DataLoader(mode = "train",
-                          miniBatchSize = batchSize,
-                          seed = System.currentTimeMillis())
+    new Cifar10DataLoader(mode = "train", miniBatchSize = batchSize, seed = 231, take = Some(80))
+    // new Cifar10DataLoader(mode = "train", miniBatchSize = batchSize, seed = System.currentTimeMillis())
   def testLoader =
     new Cifar10DataLoader(mode = "dev", miniBatchSize = batchSize)
 
@@ -149,9 +154,9 @@ object LeNet5 extends App with LazyLogging {
       var iterationStart = System.currentTimeMillis()
 
       logger.info(s"starting epoch $epoch")
-      var epochStart = System.currentTimeMillis()
+      val epochStart = System.currentTimeMillis()
 
-      trainLoader.foreach {
+      loader.foreach {
         case (x, y) =>
           iteration += 1
 
@@ -181,7 +186,7 @@ object LeNet5 extends App with LazyLogging {
 
       val epochDuration = System.currentTimeMillis() - epochStart
       logger.info(s"epoch took $epochDuration ms")
-      evaluateModel(model, testLoader)
+      // evaluateModel(model, testLoader)
       logger.info(s"training accuracy = ${epochAvgAccuracy / (iteration / printEvery)}")
       logger.info(s"epoch loss = ${epochAvgLoss / (iteration / printEvery)}")
       logger.info("================")
@@ -190,6 +195,8 @@ object LeNet5 extends App with LazyLogging {
   }
 
   def evaluateModel(model: Module, testLoader: DataLoader): Unit = {
+    // set in evaluation mode
+    model.eval()
     val avgAccuracy =
       testLoader.par.map {
         case (x, y) =>
@@ -198,6 +205,9 @@ object LeNet5 extends App with LazyLogging {
           ns.sum(y.data == guessed) / x.shape.head
       }.sum / testLoader.size
     logger.info(s"evaluation accuracy = $avgAccuracy")
+
+    // set back to training mode
+    model.train()
   }
 
 }
