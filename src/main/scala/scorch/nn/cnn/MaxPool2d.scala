@@ -98,20 +98,20 @@ object MaxPool2d {
       logger.debug(s"backward pass took ${bwEnd - bwStart} ms.")
 
       /*
-      big fat bug in broadcast of nd4j ndarrays, so cannot use below
+big fat bug in broadcast of nd4j ndarrays, so cannot use below
 
-      val dxReshaped = ns.zerosLike(xReshaped)
-      val outShape = out.shape
-      val outNewAxis = out.reshape(outShape.head, outShape(1), outShape(2), 1, outShape(3), 1)
-      val mask: Tensor = xReshaped == outNewAxis
-      val dOutShape = dOut.shape.patch(3, Seq(1), 0) :+ 1
-      val dOutNewAxis = dOut.reshape(dOutShape)
-      val dOutBroadcast = new Tensor(
-        ns.Ops.broadcastArrays(Seq(dOutNewAxis.array, dxReshaped.array)).head)
-      dxReshaped(mask) := dOutBroadcast(mask).asTensor
-      // dxReshaped /= ns.sum(ns.sum(mask, axis=5), axis=3)
-      val dx = dxReshaped.reshape(x.shape: _*)
-      x.backward(Variable(dx))
+val dxReshaped = ns.zerosLike(xReshaped)
+val outShape = out.shape
+val outNewAxis = out.reshape(outShape.head, outShape(1), outShape(2), 1, outShape(3), 1)
+val mask: Tensor = xReshaped == outNewAxis
+val dOutShape = dOut.shape.patch(3, Seq(1), 0) :+ 1
+val dOutNewAxis = dOut.reshape(dOutShape)
+val dOutBroadcast = new Tensor(
+  ns.Ops.broadcastArrays(Seq(dOutNewAxis.array, dxReshaped.array)).head)
+dxReshaped(mask) := dOutBroadcast(mask).asTensor
+// dxReshaped /= ns.sum(ns.sum(mask, axis=5), axis=3)
+val dx = dxReshaped.reshape(x.shape: _*)
+x.backward(Variable(dx))
      */
     }
   }
@@ -151,9 +151,9 @@ object MaxPool2d {
 
     override def backward(gradOutput: Variable): Unit = {
 
-      // basically, this is
-      // dx = (x.data == out) * gradOutput.data
-      // but the shapes don't fit
+// basically, this is
+// dx = (x.data == out) * gradOutput.data
+// but the shapes don't fit
 
       val dx = ns.zerosLike(x.data)
       val dOut = gradOutput.data
