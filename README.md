@@ -89,7 +89,6 @@ object ReadmeConvNet extends App {
 }
 ```
 
-
 The documentation below is a copy of the Autograd and Neural Networks sections of 
 [PyTorch blitz](http://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html),
 adapted for Scorch.
@@ -428,7 +427,7 @@ Thanks to [Jasper](https://github.com/Jasper-M) for helping out with Scala type 
 ## Dependency
 Add this to build.sbt:
 ```scala
-libraryDependencies += "be.botkop" %% "scorch" % "0.1.0-SNAPSHOT"
+libraryDependencies += "be.botkop" %% "scorch" % "0.1.0"
 ```
 
 ## References
