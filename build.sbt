@@ -5,7 +5,7 @@ lazy val root = (project in file(".")).settings(
     List(
       organization := "be.botkop",
       scalaVersion := "2.12.5",
-      version := "0.1.0-SNAPSHOT"
+      version := "0.1.0"
     )),
   name := "scorch",
   libraryDependencies += numsca,
