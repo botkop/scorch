@@ -5,6 +5,7 @@ import scorch.autograd.Variable
 trait DataLoader extends scala.collection.immutable.Iterable[(Variable, Variable)] {
   def numSamples: Int
   def numBatches: Int
+  def mode: String
 }
 
 object DataLoader {

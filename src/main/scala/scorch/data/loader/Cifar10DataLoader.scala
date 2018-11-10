@@ -13,7 +13,7 @@ import scala.collection.parallel.mutable.ParArray
 import scala.language.postfixOps
 import scala.util.Random
 
-class Cifar10DataLoader(mode: String,
+class Cifar10DataLoader(val mode: String,
                         miniBatchSize: Int,
                         tailShape: Seq[Int] = Seq(3, 32, 32),
                         take: Option[Int] = None,
