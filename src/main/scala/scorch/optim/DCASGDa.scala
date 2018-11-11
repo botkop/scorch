@@ -9,7 +9,7 @@ import scorch.autograd.Variable
   * with adaptive lambda
   * https://arxiv.org/abs/1609.08326
   */
-class DCASGDa(parameters: Seq[Variable],
+case class DCASGDa(parameters: Seq[Variable],
               lr: Double,
               momentum: Double = 0.95,
               lambda: Double = 2)

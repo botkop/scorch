@@ -23,10 +23,7 @@ case class DCASGD(parameters: Seq[Variable],
     if (useMomentum) Some(ns.zerosLike(v.data)) else None
   }
 
-  var t = 0
-
   override def step(): Unit = {
-    t += 1
 
     parameters.indices.foreach { i =>
       val weight = parameters(i).data
