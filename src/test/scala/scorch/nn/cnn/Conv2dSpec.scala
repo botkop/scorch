@@ -140,9 +140,9 @@ class Conv2dSpec extends FlatSpec with Matchers {
     def fb(a: Variable) =
       Conv2d.Im2colConv2dFunction(x, w, a, pad, stride).forward()
 
-    oneOpGradientCheck(fx, x)
-    oneOpGradientCheck(fw, w.copy())
-    oneOpGradientCheck(fb, b.copy())
+    oneOpGradientCheck(fx, x, 3e-8)
+    oneOpGradientCheck(fw, w.copy(), 3e-8)
+    oneOpGradientCheck(fb, b.copy(), 3e-8)
   }
 
 }

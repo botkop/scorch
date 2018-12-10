@@ -180,7 +180,6 @@ x.backward(Variable(dx))
         val upd = (window == out(n, c, h, w)) * dOut(n, c, h, w)
         dx(n, c, h1 :> h2, w1 :> w2) := upd
       }
-
       x.backward(Variable(dx))
     }
   }
