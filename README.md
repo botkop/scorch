@@ -1,3 +1,5 @@
+"What I cannot create, I do not understand." - Richard Feynman.
+
 Scorch
 ======
 Scorch is a deep learning framework in Scala inspired by PyTorch.

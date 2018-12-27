@@ -1,3 +1,6 @@
+resolvers +=
+  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+
 import Dependencies._
 
 lazy val root = (project in file(".")).settings(
