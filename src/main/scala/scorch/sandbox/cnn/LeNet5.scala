@@ -15,9 +15,9 @@ object LeNet5 extends App with LazyLogging {
 
   case class Net() extends Module {
 
-    val c1 = Conv2d(numChannels = 1,
+    val c1 = Conv2d(numChannels = 3,
                     numFilters = 6,
-                    filterSize = 5,
+                    filterSize = 3,
                     weightScale = 1e-3,
                     pad = 1,
                     stride = 1)
@@ -42,7 +42,7 @@ object LeNet5 extends App with LazyLogging {
 
     val numFlatFeatures: Int =
       c5.outputShape(p4.outputShape(
-          c3.outputShape(p2.outputShape(c1.outputShape(List(-1, 1, 28, 28))))))
+          c3.outputShape(p2.outputShape(c1.outputShape(List(-1, 3, 32, 32))))))
         .tail
         .product
 
@@ -54,7 +54,7 @@ object LeNet5 extends App with LazyLogging {
     val f7 = Linear(84, 10)
 
     override def forward(xf: Variable): Variable = {
-      val x = Variable(xf.data.reshape(-1, 1, 28, 28))
+      val x = Variable(xf.data.reshape(-1, 3, 32, 32))
       x ~>
         c1 ~> relu ~> p2 ~>
         c3 ~> relu ~> p4 ~>
@@ -112,8 +112,9 @@ object LeNet5 extends App with LazyLogging {
 
   // val net = Net().par()
   // val net = FcNet().par()
-  val net = CNN1().par()
+  //val net = CNN1().par()
   // val net = FcNet2().par()
+  val net = Net()
 
   // set in training mode for drop out / batch norm
   net.train()
