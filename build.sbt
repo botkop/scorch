@@ -1,55 +1,27 @@
-resolvers +=
-  "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
+import sbt._
+import sbt.Keys._
 
-import Dependencies._
 
-lazy val root = (project in file(".")).settings(
-  inThisBuild(
-    List(
-      organization := "be.botkop",
-      scalaVersion := "2.12.5",
-      version := "0.1.2-SNAPSHOT"
-    )),
-  name := "scorch",
-  libraryDependencies += numsca,
-  libraryDependencies += scalaTest % Test
-)
+version := "1.0"
 
-crossScalaVersions := Seq("2.11.12", "2.12.4")
+scalaVersion := "2.12.7"
 
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases" at nexus + "service/local/staging/deploy/maven2")
-}
 
-pomIncludeRepository := { _ =>
-  false
-}
+// https://mvnrepository.com/artifact/org.bytedeco/javacpp
+libraryDependencies += "org.bytedeco" % "javacpp" % "1.4.3"
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.12.7"
 
-licenses := Seq(
-  "BSD-style" -> url("http://www.opensource.org/licenses/bsd-license.php"))
+enablePlugins(JniGeneratorPlugin, JniBuildPlugin)
+JniBuildPlugin.autoImport.torchLibPath in jniBuild := "/home/nazar/libtorch"
+//sourceDirectory in nativeCompile := sourceDirectory.value / "native"
+//target in nativeCompile :=target.value / "native" / nativePlatform.value
 
-homepage := Some(url("https://github.com/botkop"))
 
-scmInfo := Some(
-  ScmInfo(
-    url("https://github.com/botkop/scorch"),
-    "scm:git@github.com:botkop/scorch.git"
-  )
-)
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3"
 
-developers := List(
-  Developer(
-    id = "botkop",
-    name = "Koen Dejonghe",
-    email = "koen@botkop.be",
-    url = url("https://github.com/botkop")
-  )
-)
+lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.0.3"
 
-publishMavenStyle := true
-publishArtifact in Test := false
-// skip in publish := true
+libraryDependencies += scalaTest % Test
+
+
