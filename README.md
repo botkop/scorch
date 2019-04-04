@@ -2,6 +2,9 @@
 
 Scorch
 ======
+
+[![Join the chat at https://gitter.im/botkop/scorch](https://badges.gitter.im/botkop/scorch.svg)](https://gitter.im/botkop/scorch?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Scorch is a deep learning framework in Scala inspired by PyTorch.
 
 It has [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) built in 
