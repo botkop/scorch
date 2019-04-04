@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 14)
 message(STATUS "torch lib path is ${CMAKE_PREFIX_PATH}")
 # link_directories(/usr/local/cuda-9.0/lib64)
 
-find_library(curand CURAND)
+# find_library(curand CURAND)
 
 find_package(Torch REQUIRED)
 
