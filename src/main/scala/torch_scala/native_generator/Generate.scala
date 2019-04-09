@@ -16,7 +16,7 @@ object Generate extends App {
   //  )
 
   val gen = new Builder()
-  gen.outputDirectory("/home/nazar/java_torch_2/src/native")
+  gen.outputDirectory("src/native")
   gen.classesOrPackages("torch_scala.api.nn.Module", "torch_scala.examples.FourierNet")
   gen.build()
 

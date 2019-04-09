@@ -7,18 +7,18 @@ import org.bytedeco.javacpp.annotation._
 import org.bytedeco.javacpp.tools._
 
 
-@Properties(target = "torch_native_lib1234",
-            value = Array(new Platform(include = Array("torch/all.h")))
-)
-class NativeLibraryConfig extends InfoMapper {
-  def map(infoMap: InfoMap): Unit = {
-    //infoMap.put(new Info("data<long>").javaNames("data_int"))
-  }
-}
+//@Properties(target = "torch_native_lib1234",
+//            value = Array(new Platform(include = Array("torch/all.h")))
+//)
+//class NativeLibraryConfig extends InfoMapper {
+//  def map(infoMap: InfoMap): Unit = {
+//    //infoMap.put(new Info("data<long>").javaNames("data_int"))
+//  }
+//}
 
 
 trait NativeLoader {
-  val workingDir = System.getProperty("user.dir")
+  val workingDir: String = System.getProperty("user.dir")
   System.load(workingDir + "/src/native/libjava_torch_lib0.so")
 
 }
