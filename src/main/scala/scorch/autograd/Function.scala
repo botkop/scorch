@@ -54,7 +54,7 @@ case class Sub(v1: Variable, v2: Variable) extends Function {
 }
 
 case class SubConstant(v: Variable, d: Double) extends Function {
-  override def forward(): Variable = Variable(v.data + d, Some(this))
+  override def forward(): Variable = Variable(v.data - d, Some(this))
   override def backward(gradOutput: Variable): Unit = {
     v.backward(gradOutput)
   }
