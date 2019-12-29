@@ -12,7 +12,7 @@ Scorch
 Scorch is a deep learning framework in Scala inspired by PyTorch.
 
 It has [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) built in 
-and follows an [imperative coding style](https://mxnet.incubator.apache.org/architecture/program_model.html#symbolic-vs-imperative-programs).
+and follows an [imperative coding style](https://mxnet.apache.org/api/architecture/program_model).
 
 Scorch uses [numsca](https://github.com/botkop/numsca) for creation and processing of Tensors.
 
