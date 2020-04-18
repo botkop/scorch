@@ -3,7 +3,7 @@ package scorch.nn.cnn
 import botkop.numsca._
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
-import org.nd4j.linalg.factory.Nd4j.PadMode
+import org.nd4j.linalg.api.ops.impl.transforms.Pad
 import scorch.autograd.{Function, Variable}
 import scorch.nn.Module
 
@@ -59,7 +59,7 @@ object Conv2d extends LazyLogging {
       outputShape(x.shape, w.shape, pad, stride)
     val List(hh, ww) = w.shape.takeRight(2)
 
-    val padArea = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
+    val padArea: Array[Array[Int]] = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
 
     override def forward(): Variable = {
 
@@ -69,7 +69,7 @@ object Conv2d extends LazyLogging {
 
       for {
         n <- 0 until numDataPoints
-        xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
+        xPad = ns.pad(x.data(n), padArea, Pad.Mode.CONSTANT)
 
         f <- 0 until numFilters
         wf = w.data(f)
@@ -104,8 +104,8 @@ object Conv2d extends LazyLogging {
       val db = zerosLike(b.data)
 
       (0 until numDataPoints).foreach { n =>
-        val dxPad = ns.pad(dx(n), padArea, PadMode.CONSTANT)
-        val xPad = ns.pad(x.data(n), padArea, PadMode.CONSTANT)
+        val dxPad = ns.pad(dx(n), padArea, Pad.Mode.CONSTANT)
+        val xPad = ns.pad(x.data(n), padArea, Pad.Mode.CONSTANT)
 
         (0 until numFilters).foreach { f =>
           val wf = w.data(f)
@@ -245,13 +245,13 @@ object Conv2d extends LazyLogging {
     val hPrime: Int = (height + 2 * pad - hh) / stride + 1
     val wPrime: Int = (width + 2 * pad - ww) / stride + 1
 
-    val padArea = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
+    val padArea: Array[Array[Int]] = Array(Array(0, 0), Array(pad, pad), Array(pad, pad))
 
     val imCols: immutable.Seq[(Int, Tensor)] = for {
       imNum <- 0 until batchSize
     } yield {
       val im = x.data(imNum)
-      val imPad = ns.pad(im, padArea, PadMode.CONSTANT)
+      val imPad = ns.pad(im, padArea, Pad.Mode.CONSTANT)
       val col = im2col(imPad, hh, ww, stride)
       (imNum, col)
     }
@@ -305,3 +305,4 @@ object Conv2d extends LazyLogging {
     }
   }
 }
+

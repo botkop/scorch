@@ -9,7 +9,9 @@ import scorch.TestUtil.oneOpGradientCheck
 
 class MaxPool2dSpec extends FlatSpec with Matchers {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  import org.nd4j.linalg.api.buffer.DataType
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
+
   ns.rand.setSeed(234)
 
   "NaiveMaxPoolingFunction" should "pass forward" in {

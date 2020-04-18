@@ -17,7 +17,9 @@ import scala.util.Random
 
 class DataLoaderSpec extends FlatSpec with Matchers {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  import org.nd4j.linalg.api.buffer.DataType
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
+
   ns.rand.setSeed(231)
   Random.setSeed(231)
 
@@ -70,7 +72,7 @@ class DataLoaderSpec extends FlatSpec with Matchers {
         x ~> conv ~> relu ~> pool ~> flatten ~> fc ~> relu
     }
 
-    val net = Net().par(parallelism)
+    val net = Net()
 
     val optimizer = Adam(net.parameters, lr = 0.01)
     val loader = new Cifar10DataLoader(miniBatchSize = batchSize,

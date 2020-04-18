@@ -199,7 +199,8 @@ object LeNet5 extends App with LazyLogging {
     // set in evaluation mode
     model.eval()
     val avgAccuracy =
-      testLoader.par.map {
+      // testLoader.par.map {
+      testLoader.map {
         case (x, y) =>
           val yHat = model(x)
           val guessed = ns.argmax(yHat.data, axis = 1)
@@ -212,3 +213,4 @@ object LeNet5 extends App with LazyLogging {
   }
 
 }
+

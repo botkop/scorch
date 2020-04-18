@@ -1,5 +1,6 @@
 package scorch.sandbox.rnn
 
+import org.nd4j.linalg.api.buffer.DataType
 import botkop.numsca._
 import botkop.{numsca => ns}
 import org.nd4j.linalg.api.buffer.DataBuffer
@@ -12,7 +13,7 @@ import scala.util.Random
 
 class TemporalSoftmaxSpec extends FlatSpec with Matchers {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
   // todo: fix random seed in numsca
   ns.rand.setSeed(231)
   Random.setSeed(231)

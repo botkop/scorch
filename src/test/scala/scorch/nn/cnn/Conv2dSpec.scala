@@ -12,7 +12,9 @@ import scala.language.implicitConversions
 
 class Conv2dSpec extends FlatSpec with Matchers {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  import org.nd4j.linalg.api.buffer.DataType
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
+
   ns.rand.setSeed(231)
 
   "NaiveConvFunction" should "pass forward" in {

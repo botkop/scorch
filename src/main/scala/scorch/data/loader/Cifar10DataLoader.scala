@@ -9,7 +9,6 @@ import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 
-import scala.collection.parallel.mutable.ParArray
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -101,7 +100,7 @@ object Cifar10DataLoader extends LazyLogging {
     lol.toArray flatten
   }
 
-  def getListOfFiles(dir: String): ParArray[(Float, File)] = {
+  def getListOfFiles(dir: String): Array[(Float, File)] = {
 
     val labels = List(
       "airplane",
@@ -129,11 +128,10 @@ object Cifar10DataLoader extends LazyLogging {
         case (_, cat, file) =>
           (labels.indexOf(cat).toFloat, file)
       }
-      .par
   }
 
   def serializeDataset(outputFolder: String,
-                       fileList: ParArray[(Float, File)],
+                       fileList: Array[(Float, File)],
                        meanImage: Tensor): Unit =
     fileList.foreach {
       case (yData, file) =>

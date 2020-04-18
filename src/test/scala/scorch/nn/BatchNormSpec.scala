@@ -12,7 +12,8 @@ import scorch.TestUtil._
 
 class BatchNormSpec extends FlatSpec with Matchers {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  import org.nd4j.linalg.api.buffer.DataType
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
   ns.rand.setSeed(231)
 
   "BatchNorm" should "forward pass with gamma = 1 and beta = 0" in {

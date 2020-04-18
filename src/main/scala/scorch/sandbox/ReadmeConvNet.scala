@@ -43,7 +43,7 @@ object ReadmeConvNet extends App with LazyLogging {
   }
 
   // instantiate the network, and parallelize it
-  val net = ConvReluPoolAffineNetwork().par()
+  val net = ConvReluPoolAffineNetwork()
 
   // stochastic gradient descent optimizer for updating the parameters
   val optimizer = SGD(net.parameters, lr = 0.001)

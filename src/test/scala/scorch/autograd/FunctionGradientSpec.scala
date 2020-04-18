@@ -1,5 +1,7 @@
 package scorch.autograd
 
+
+import org.nd4j.linalg.api.buffer.DataType
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
@@ -15,7 +17,7 @@ class FunctionGradientSpec
     with BeforeAndAfterEach
     with LazyLogging {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
   ns.rand.setSeed(231)
 
   override def beforeEach(): Unit = {}

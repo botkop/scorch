@@ -7,15 +7,16 @@ lazy val root = (project in file(".")).settings(
   inThisBuild(
     List(
       organization := "be.botkop",
-      scalaVersion := "2.12.5",
+      scalaVersion := "2.13.1",
       version := "0.1.2-SNAPSHOT"
     )),
   name := "scorch",
   libraryDependencies += numsca,
+  libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0",
   libraryDependencies += scalaTest % Test
 )
 
-crossScalaVersions := Seq("2.11.12", "2.12.4")
+crossScalaVersions := Seq("2.11.12", "2.12.4", "2.13.1")
 
 publishTo := {
   val nexus = "https://oss.sonatype.org/"

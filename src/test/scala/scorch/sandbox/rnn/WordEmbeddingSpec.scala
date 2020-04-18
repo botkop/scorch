@@ -1,5 +1,6 @@
 package scorch.sandbox.rnn
 
+import org.nd4j.linalg.api.buffer.DataType
 import botkop.numsca.Tensor
 import botkop.{numsca => ns}
 import org.nd4j.linalg.api.buffer.DataBuffer
@@ -15,7 +16,7 @@ import scala.language.postfixOps
 
 class WordEmbeddingSpec extends FlatSpec with Matchers {
 
-  Nd4j.setDataType(DataBuffer.Type.DOUBLE)
+  Nd4j.setDefaultDataTypes(DataType.DOUBLE, DataType.DOUBLE)
   ns.rand.setSeed(231)
 
   "WordEmbedding" should "forward pass" in {
