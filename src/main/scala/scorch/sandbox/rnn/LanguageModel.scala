@@ -107,7 +107,7 @@ class LanguageModel[T](
 }
 
 object CharModel extends App {
-  def tokenize(s: String): Array[Char] = s.toCharArray
+  def tokenize(s: String): IndexedSeq[Char] = s.toCharArray.toIndexedSeq
   def join(s: Seq[Char]) = s.mkString
   val fileName = "src/test/resources/dinos.txt"
   val corpus = Random.shuffle(
@@ -124,11 +124,13 @@ object CharModel extends App {
 }
 
 object WordModel extends App {
-  def tokenize(s: String): Array[String] =
+  def tokenize(s: String): IndexedSeq[String] =
     s.toLowerCase
       .replaceAll("[\\.',;:\\-!\\?\\(]+", " ")
       .split("\\s+")
       .filterNot(_.isEmpty)
+      .toIndexedSeq
+
 
   def join(s: Seq[String]) = s.mkString(" ")
   val fileName = "src/test/resources/sonnets-cleaned.txt"

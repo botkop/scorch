@@ -7,15 +7,18 @@ lazy val root = (project in file(".")).settings(
   inThisBuild(
     List(
       organization := "be.botkop",
-      scalaVersion := "2.12.5",
+      scalaVersion := "2.13.1",
       version := "0.1.2-SNAPSHOT"
     )),
   name := "scorch",
   libraryDependencies += numsca,
-  libraryDependencies += scalaTest % Test
+  libraryDependencies += scalaTest % Test,
+
+  libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0"
 )
 
-crossScalaVersions := Seq("2.11.12", "2.12.4")
+// https://github.com/scala/scala-parallel-collections#cross-building-source-compatibility
+// crossScalaVersions := Seq("2.11.12", "2.12.4", "2.13.1")
 
 publishTo := {
   val nexus = "https://oss.sonatype.org/"
@@ -53,3 +56,5 @@ developers := List(
 publishMavenStyle := true
 publishArtifact in Test := false
 // skip in publish := true
+
+scalacOptions ++= Seq("-deprecation", "-feature")

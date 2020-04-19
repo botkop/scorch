@@ -20,7 +20,7 @@ abstract class BaseModule(localParameters: Seq[Variable] = Nil) {
 
   // by default, obtain submodules through introspection
   lazy val subModules: Seq[BaseModule] =
-    this.getClass.getDeclaredFields.flatMap { f =>
+    this.getClass.getDeclaredFields.toIndexedSeq.flatMap { f =>
       f setAccessible true
       f.get(this) match {
         case module: BaseModule => Some(module)

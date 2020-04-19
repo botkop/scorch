@@ -2,14 +2,14 @@ package scorch.sandbox.cnn
 
 import botkop.{numsca => ns}
 import com.typesafe.scalalogging.LazyLogging
+import scorch._
 import scorch.autograd.Variable
+import scorch.data.loader.{Cifar10DataLoader, DataLoader}
 import scorch.nn._
 import scorch.nn.cnn.{Conv2d, MaxPool2d}
-import scorch._
-import scorch.data.loader.{Cifar10DataLoader, DataLoader, MnistDataLoader}
-import scorch.optim.{Adam, Nesterov, Optimizer}
+import scorch.optim.{Adam, Optimizer}
 
-import scala.util.Random
+import scala.collection.parallel.CollectionConverters._
 
 object LeNet5 extends App with LazyLogging {
 

@@ -57,6 +57,6 @@ class MnistDataLoader(val mode: String,
     (x, y)
   } toSeq
 
-  override def iterator: Iterator[(Variable, Variable)] = data.toIterator
+  override def iterator: Iterator[(Variable, Variable)] = data.iterator
 
 }

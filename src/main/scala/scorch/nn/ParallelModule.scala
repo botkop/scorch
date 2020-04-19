@@ -1,6 +1,7 @@
 package scorch.nn
 
 import botkop.{numsca => ns}
+import scala.collection.parallel.CollectionConverters._
 import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 
@@ -37,7 +38,7 @@ object ParallelModule {
       }.unzip
 
     override def forward(): Variable =
-      Variable(ns.concatenate(predictions.map(_.data).seq), Some(this))
+      Variable(ns.concatenate(predictions.map(_.data).seq.toSeq), Some(this))
 
     override def backward(gradOutput: Variable): Unit = {
       predictions.zip(fromTos).foreach {
@@ -46,7 +47,7 @@ object ParallelModule {
           v.backward(g)
       }
 
-      val gradient = Variable(ns.concatenate(xs.map(_.grad.data).seq))
+      val gradient = Variable(ns.concatenate(xs.map(_.grad.data).seq.toSeq))
       x.backward(gradient)
     }
   }

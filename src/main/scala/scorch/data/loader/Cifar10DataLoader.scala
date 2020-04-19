@@ -9,6 +9,7 @@ import botkop.numsca.Tensor
 import com.typesafe.scalalogging.LazyLogging
 import scorch.autograd.Variable
 
+import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.mutable.ParArray
 import scala.language.postfixOps
 import scala.util.Random
